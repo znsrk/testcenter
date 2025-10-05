@@ -42,7 +42,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const userDetails = {
     name: 'Жарылғасын Жансерік',
     age: 17,
-    address: 'Алматы, Абай к-сі 50',
+    address: 'AstanaIT university',
     iin: '070101500123',
   };
 
@@ -110,7 +110,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
             <NavCard 
               icon={<InfoIcon />}
               title="Маңызды Ақпарат"
-              description="Тестілеу ережелері мен жаңалықтарын оқыңыз."
+              description="Тестілеу орталығының контактілері."
               onClick={() => onNavigate('info')} 
             />
           </div>
