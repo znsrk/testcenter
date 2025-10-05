@@ -83,7 +83,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   <p className="mt-1"><span className="font-semibold">Мекен-жайы:</span> {userDetails.address}</p>
                 </div>
                 <div className="border-t border-gray-200 px-4 py-2">
-                  <a href="#" onClick={() => onNavigate('profile')} className="block text-sm text-[#007BFF] hover:underline">Профильді көру</a>
+                  <a href="" onClick={() => onNavigate('profile')} className="block text-sm text-[#007BFF] hover:underline">Профильді көру</a>
                 </div>
               </div>
             </div>
