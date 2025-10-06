@@ -76,7 +76,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
               <div className="py-1" role="none">
                 <div className="border-b border-gray-200 px-4 py-3">
                   <p className="text-sm font-semibold text-gray-900">{userDetails.name}</p>
-                  <p className="text-sm text-gray-500">ИИН: {userDetails.iin}</p>
+                  <p className="text-sm text-gray-500">БИН: {userDetails.iin}</p>
                 </div>
                 <div className="px-4 py-3 text-sm text-gray-700">
                   <p><span className="font-semibold">Жасы:</span> {userDetails.age}</p>
