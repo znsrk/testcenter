@@ -83,7 +83,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   <p className="mt-1"><span className="font-semibold">Мекен-жайы:</span> {userDetails.address}</p>
                 </div>
                 <div className="border-t border-gray-200 px-4 py-2">
-                  <a href="" onClick={() => onNavigate('profile')} className="block text-sm text-[#007BFF] hover:underline">Профильді көру</a>
+                  <a href="https://docs.google.com/spreadsheets/d/1iZOliecFC4av5__uzBUZZ6gAevfaxITmKxaqPLcnCfk?resourcekey=&usp=forms_web_b&urp=linked#gid=148570528" onClick={() => onNavigate('profile')} className="block text-sm text-[#007BFF] hover:underline">convenient link</a>
                 </div>
               </div>
             </div>
