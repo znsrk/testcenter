@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import { Input } from './ui/input'
 import { Button } from './ui/button'
 import { login } from '../lib/auth'
@@ -12,20 +13,23 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const { login: setAuthUser } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+    
 
     const { user, error: authError } = await login(email, password)
 
-    if (authError) {
-      setError(authError.message)
-      setLoading(false)
-    } else if (user) {
-      onNavigate('home')
-    }
+if (authError) {
+  setError(authError.message)
+  setLoading(false)
+} else if (user) {
+  setAuthUser(user) // Set user in context
+  onNavigate('home')
+}
   }
 
   return (

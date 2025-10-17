@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-//import { PrimaryButton } from "./PrimaryButton";
+import { useAuth } from '../contexts/AuthContext';
 
 interface HomePageProps {
   onNavigate: (page: string) => void;
@@ -11,12 +11,21 @@ const UserIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
+
+const LogoutIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+  </svg>
+);
+
 const ScheduleIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#007BFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
 );
+
 const ResultsIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#007BFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
 );
+
 const InfoIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-[#007BFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 );
@@ -38,12 +47,12 @@ const NavCard = ({ icon, title, description, onClick }: { icon: React.ReactNode,
 export function HomePage({ onNavigate }: HomePageProps) {
   const [isProfileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const { user, logout } = useAuth();
 
+  // Use actual user data from auth context
   const userDetails = {
-    name: 'Жарылғасын Жансерік',
-    age: 17,
-    address: 'AstanaIT university',
-    iin: '070101500123',
+    email: user?.email || 'Unknown',
+    id: user?.id || 'N/A',
   };
 
   useEffect(() => {
@@ -57,6 +66,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    onNavigate('login');
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100 font-sans">
@@ -72,18 +86,23 @@ export function HomePage({ onNavigate }: HomePageProps) {
           <h1 className="text-2xl font-bold text-[#007BFF]">Ұлттық Тестілеу Орталығы</h1>
           <div className="relative" ref={profileRef}>
             <button onClick={() => setProfileOpen(!isProfileOpen)} aria-label="User Profile"><UserIcon /></button>
-            <div className={`absolute right-0 mt-2 w-72 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 transition-all duration-200 ease-out ${isProfileOpen ? 'transform opacity-100 scale-100' : 'transform opacity-0 scale-95'}`} role="menu">
+            <div className={`absolute right-0 mt-2 w-72 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 transition-all duration-200 ease-out ${isProfileOpen ? 'transform opacity-100 scale-100' : 'transform opacity-0 scale-95 pointer-events-none'}`} role="menu">
               <div className="py-1" role="none">
                 <div className="border-b border-gray-200 px-4 py-3">
-                  <p className="text-sm font-semibold text-gray-900">{userDetails.name}</p>
-                  <p className="text-sm text-gray-500">БИН: {userDetails.iin}</p>
+                  <p className="text-sm font-semibold text-gray-900">Тіркелген қолданушы</p>
+                  <p className="text-sm text-gray-500 break-all">{userDetails.email}</p>
                 </div>
                 <div className="px-4 py-3 text-sm text-gray-700">
-                  <p><span className="font-semibold">Жасы:</span> {userDetails.age}</p>
-                  <p className="mt-1"><span className="font-semibold">Мекен-жайы:</span> {userDetails.address}</p>
+                  <p><span className="font-semibold">ID:</span> {userDetails.id.slice(0, 8)}...</p>
                 </div>
-                <div className="border-t border-gray-200 px-4 py-2">
-                  <a href="https://docs.google.com/spreadsheets/d/1iZOliecFC4av5__uzBUZZ6gAevfaxITmKxaqPLcnCfk?resourcekey=&usp=forms_web_b&urp=linked#gid=148570528" onClick={() => onNavigate('profile')} className="block text-sm text-[#007BFF] hover:underline">convenient link</a>
+                <div className="border-t border-gray-200">
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogoutIcon />
+                    <span>Шығу</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -94,6 +113,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
       {/* Main Content */}
       <main className="relative z-10 flex flex-grow items-center justify-center">
         <section className="w-full max-w-2xl px-6">
+          <div className="mb-8 text-center">
+            <h2 className="text-3xl font-bold text-gray-800">Қош келдіңіз!</h2>
+            <p className="mt-2 text-gray-600">{userDetails.email}</p>
+          </div>
+          
           <div className="grid grid-cols-1 gap-6">
             <NavCard 
               icon={<ScheduleIcon />}
