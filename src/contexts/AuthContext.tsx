@@ -4,6 +4,9 @@ import { getCurrentUser, logout as authLogout } from '../lib/auth'
 interface User {
   id: string
   email: string
+  first_name?: string
+  last_name?: string
+  iin?: string
 }
 
 interface AuthContextType {
