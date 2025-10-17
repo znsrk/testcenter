@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { Input } from './ui/input'
-import { Button } from './ui/button'
 import { signUp } from '../lib/auth'
 
 interface SignupPageProps {
@@ -9,12 +7,27 @@ interface SignupPageProps {
 
 export function SignupPage({ onNavigate }: SignupPageProps) {
   const [email, setEmail] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [iin, setIIN] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   const validateForm = () => {
+    if (!firstName.trim()) {
+      setError('First name is required')
+      return false
+    }
+    if (!lastName.trim()) {
+      setError('Last name is required')
+      return false
+    }
+    if (!/^[0-9]{12}$/.test(iin)) {
+      setError('IIN must be exactly 12 digits')
+      return false
+    }
     if (password.length < 6) {
       setError('Password must be at least 6 characters')
       return false
@@ -36,7 +49,13 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
 
     setLoading(true)
 
-    const { user, error: authError } = await signUp(email, password)
+    const { user, error: authError } = await signUp({
+      email,
+      password,
+      firstName,
+      lastName,
+      iin
+    })
 
     if (authError) {
       setError(authError.message)
@@ -48,87 +67,146 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Create Account</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Sign up to get started
-          </p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-200 p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
+            <p className="text-gray-600">Sign up to get started</p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Аты (First Name)
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  required
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                  placeholder="Жансерік"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Тегі (Last Name)
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  required
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  disabled={loading}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                  placeholder="Жарылғасын"
+                />
+              </div>
+            </div>
+
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2">
-                Email
+              <label htmlFor="iin" className="block text-sm font-medium text-gray-700 mb-2">
+                ЖСН (IIN)
               </label>
-              <Input
+              <input
+                id="iin"
+                type="text"
+                required
+                value={iin}
+                onChange={(e) => setIIN(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                disabled={loading}
+                maxLength={12}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                placeholder="070101500123"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                12 цифр (12 digits)
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
                 disabled={loading}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-2">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <Input
+              <input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
                 disabled={loading}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                placeholder="••••••••"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-gray-500">
                 Must be at least 6 characters
               </p>
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm Password
               </label>
-              <Input
+              <input
                 id="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                required
                 disabled={loading}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
+                placeholder="••••••••"
               />
             </div>
-          </div>
 
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Creating account...' : 'Sign Up'}
-          </Button>
-
-          <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{' '}
             <button
-              type="button"
-              onClick={() => onNavigate('login')}
-              className="font-medium text-primary hover:underline"
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
             >
-              Sign in
+              {loading ? 'Creating account...' : 'Sign Up'}
             </button>
-          </p>
-        </form>
+
+            <p className="text-center text-sm text-gray-600">
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => onNavigate('login')}
+                className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                Sign in
+              </button>
+            </p>
+          </form>
+        </div>
       </div>
     </div>
   )

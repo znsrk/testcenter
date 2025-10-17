@@ -51,7 +51,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   // Use actual user data from auth context
   const userDetails = {
+    name: user?.first_name && user?.last_name 
+      ? `${user.first_name} ${user.last_name}` 
+      : 'Қолданушы',
     email: user?.email || 'Unknown',
+    iin: user?.iin || 'N/A',
     id: user?.id || 'N/A',
   };
 
@@ -86,13 +90,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
           <h1 className="text-2xl font-bold text-[#007BFF]">Ұлттық Тестілеу Орталығы</h1>
           <div className="relative" ref={profileRef}>
             <button onClick={() => setProfileOpen(!isProfileOpen)} aria-label="User Profile"><UserIcon /></button>
-            <div className={`absolute right-0 mt-2 w-72 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 transition-all duration-200 ease-out ${isProfileOpen ? 'transform opacity-100 scale-100' : 'transform opacity-0 scale-95 pointer-events-none'}`} role="menu">
+            <div className={`absolute right-0 mt-2 w-80 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 transition-all duration-200 ease-out ${isProfileOpen ? 'transform opacity-100 scale-100' : 'transform opacity-0 scale-95 pointer-events-none'}`} role="menu">
               <div className="py-1" role="none">
                 <div className="border-b border-gray-200 px-4 py-3">
-                  <p className="text-sm font-semibold text-gray-900">Тіркелген қолданушы</p>
-                  <p className="text-sm text-gray-500 break-all">{userDetails.email}</p>
+                  <p className="text-sm font-semibold text-gray-900">{userDetails.name}</p>
+                  <p className="text-xs text-gray-500 break-all mt-1">{userDetails.email}</p>
                 </div>
-                <div className="px-4 py-3 text-sm text-gray-700">
+                <div className="px-4 py-3 text-sm text-gray-700 space-y-2">
+                  <p><span className="font-semibold">ЖСН:</span> {userDetails.iin}</p>
                   <p><span className="font-semibold">ID:</span> {userDetails.id.slice(0, 8)}...</p>
                 </div>
                 <div className="border-t border-gray-200">
@@ -114,7 +119,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       <main className="relative z-10 flex flex-grow items-center justify-center">
         <section className="w-full max-w-2xl px-6">
           <div className="mb-8 text-center">
-            <h2 className="text-3xl font-bold text-gray-800">Қош келдіңіз!</h2>
+            <h2 className="text-3xl font-bold text-gray-800">Қош келдіңіз, {userDetails.name}!</h2>
             <p className="mt-2 text-gray-600">{userDetails.email}</p>
           </div>
           
