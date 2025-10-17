@@ -11,7 +11,7 @@ import { SignupPage } from './components/SignupPage'
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState('home')
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated } = useAuth()
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page)
