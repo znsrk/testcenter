@@ -18,7 +18,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
 
     try {
       // Call our custom auth function (we'll create this)
-      const response = await fetch('/.netlify/functions/login', {
+      const response = await fetch('src/lib/auth.ts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

@@ -26,8 +26,8 @@ export async function signUp(email: string, password: string): Promise<{ user?: 
     }
 
     return { user: data }
-  } catch (err) {
-    return { error: { message: 'Failed to create account' } }
+  } catch (err: any) {
+    return { error: { message: err.message || 'Failed to create account' } }
   }
 }
 
@@ -50,16 +50,25 @@ export async function login(email: string, password: string): Promise<{ user?: U
     }
 
     localStorage.setItem('userId', data.id)
+    localStorage.setItem('userEmail', data.email)
     return { user: data }
-  } catch (err) {
-    return { error: { message: 'Login failed' } }
+  } catch (err: any) {
+    return { error: { message: err.message || 'Login failed' } }
   }
 }
 
 export function logout(): void {
   localStorage.removeItem('userId')
+  localStorage.removeItem('userEmail')
 }
 
-export function getCurrentUser(): string | null {
-  return localStorage.getItem('userId')
+export function getCurrentUser(): { id: string; email: string } | null {
+  const userId = localStorage.getItem('userId')
+  const userEmail = localStorage.getItem('userEmail')
+  
+  if (userId && userEmail) {
+    return { id: userId, email: userEmail }
+  }
+  
+  return null
 }
