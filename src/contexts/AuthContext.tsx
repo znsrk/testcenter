@@ -1,12 +1,10 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
-import { getCurrentUser, logout as authLogout } from '../lib/auth'
-
 interface User {
   id: string
   email: string
   first_name?: string
   last_name?: string
   iin?: string
+<<<<<<< HEAD
 }
 
 interface AuthContextType {
@@ -51,4 +49,6 @@ export function useAuth() {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
+=======
+>>>>>>> f66adcd9abe11b63ac2998977bfa01c9b0624abb
 }
