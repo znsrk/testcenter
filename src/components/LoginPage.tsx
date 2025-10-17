@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import { login } from '../lib/auth'
 
 interface LoginPageProps {
@@ -10,6 +11,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const { login: setAuthUser } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,6 +24,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
       setError(authError.message)
       setLoading(false)
     } else if (user) {
+      setAuthUser(user) // Update the AuthContext with the logged-in user
       onNavigate('home')
     }
   }
