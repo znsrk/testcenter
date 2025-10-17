@@ -5,9 +5,11 @@ import { SuccessPage } from './components/SuccessPage';
 import { ResultsPage } from './components/ResultsPage';
 import { InfoPage } from './components/InfoPage';
 import { SchedulePage } from './components/SchedulePage';
+import { LoginPage } from './components/LoginPage';
+import { SignupPage } from './components/SignupPage';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('home');
+  const [currentPage, setCurrentPage] = useState('login');
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
@@ -15,6 +17,12 @@ export default function App() {
 
   return (
     <div className="size-full">
+      {currentPage === 'login' && (
+        <LoginPage onNavigate={handleNavigate} />
+      )}
+      {currentPage === 'signup' && (
+        <SignupPage onNavigate={handleNavigate} />
+      )}
       {currentPage === 'home' && (
         <HomePage onNavigate={handleNavigate} />
       )}
