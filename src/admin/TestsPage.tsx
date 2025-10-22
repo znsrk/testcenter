@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import AdminGate from './AdminGate';
+import TestBuilder from './TestBuilder';
+import type { TestContent } from '../lib/tests';
 
 type TestRow = {
   id: string;
@@ -115,6 +117,38 @@ export default function TestsPage() {
 
   const [creating, setCreating] = useState(false);
 
+  // Visual builder toggle + model
+  const [builderEnabled, setBuilderEnabled] = useState(true);
+  const [builderModel, setBuilderModel] = useState<TestContent>(() => {
+    try {
+      const parsed = JSON.parse('{ "sections": [ { "name": "Section 1", "questions": [] } ] }');
+      return coerceContent(parsed);
+    } catch {
+      return { sections: [ { name: 'Section 1', questions: [] } ] };
+    }
+  });
+
+  // Keep builder in sync when toggled on (load from current contentText)
+  const enableBuilder = () => {
+    try {
+      const parsed = JSON.parse(form.contentText || '{}');
+      const coerced = coerceContent(parsed);
+      setBuilderModel(coerced && Array.isArray(coerced.sections) ? coerced : { sections: [ { name: 'Section 1', questions: [] } ] });
+    } catch {
+      setBuilderModel({ sections: [ { name: 'Section 1', questions: [] } ] });
+    }
+    setBuilderEnabled(true);
+  };
+
+  // Whenever builder model changes, stringify into contentText so Create uses it
+  const onBuilderChange = (next: TestContent) => {
+    setBuilderModel(next);
+    setForm((prev) => ({
+      ...prev,
+      contentText: JSON.stringify(next, null, 2),
+    }));
+  };
+
   async function load() {
     setLoading(true);
     setError(null);
@@ -188,6 +222,9 @@ export default function TestsPage() {
       contentText: '{\n  "sections": [\n    {\n      "name": "Section 1",\n      "questions": []\n    }\n  ]\n}',
     });
 
+    // Reset builder to default
+    setBuilderModel({ sections: [ { name: 'Section 1', questions: [] } ] });
+
     await load();
   }
 
@@ -223,6 +260,12 @@ export default function TestsPage() {
       is_published: true,
       contentText: SAMPLE_CONTENT_JSON,
     }));
+    // Also load into builder if enabled
+    try {
+      const parsed = JSON.parse(SAMPLE_CONTENT_JSON);
+      const coerced = coerceContent(parsed);
+      setBuilderModel(coerced);
+    } catch {}
   };
 
   return (
@@ -276,24 +319,40 @@ export default function TestsPage() {
                 Published
               </label>
 
+              {/* Visual Builder Toggle */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong>Visual Test Builder</strong>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => (builderEnabled ? setBuilderEnabled(false) : enableBuilder())}
+                  >
+                    {builderEnabled ? 'Disable' : 'Enable'}
+                  </button>
+                  <button type="button" onClick={useSample}>Use sample content</button>
+                </div>
+              </div>
+
+              {builderEnabled && (
+                <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12 }}>
+                  <TestBuilder value={builderModel} onChange={onBuilderChange} />
+                </div>
+              )}
+
+              {/* Raw JSON editor remains for power users */}
               <label>
                 Content (JSON for jsonb column)
                 <textarea
                   value={form.contentText}
                   onChange={(e) => setForm({ ...form, contentText: e.target.value })}
-                  rows={12}
+                  rows={builderEnabled ? 8 : 12}
                   style={{ display: 'block', width: '100%', fontFamily: 'monospace', marginTop: 6 }}
                 />
               </label>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                <small style={{ color: '#666' }}>
-                  Tip: Expected shape is {"{ sections: [ { name, questions: [...] } ] }"}. If you only have
-                  a top-level {"{ questions: [...] }"}, it will be wrapped into "Section 1".
-                </small>
-                <button type="button" onClick={useSample}>
-                  Use sample content
-                </button>
-              </div>
+              <small style={{ color: '#666' }}>
+                Tip: Expected shape is {'{ sections: [ { name, questions: [...] } ] }'}. If you only have
+                a top-level {'{ questions: [...] }'}, it will be wrapped into "Section 1".
+              </small>
 
               <div>
                 <button type="submit" disabled={!canCreate || creating}>
