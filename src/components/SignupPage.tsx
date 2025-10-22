@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { signUp } from '../lib/auth'
+import { generateRandomTestResults } from '../lib/generateTestResults'
 
 interface SignupPageProps {
   onNavigate: (page: string) => void
@@ -49,20 +50,28 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
 
     setLoading(true)
 
-    const { user, error: authError } = await signUp({
-      email,
-      password,
-      firstName,
-      lastName,
-      iin
-    })
+    try {
+      const { user, error: authError } = await signUp({
+        email,
+        password,
+        firstName,
+        lastName,
+        iin
+      })
 
-    if (authError) {
-      setError(authError.message)
+      if (authError) {
+        setError(authError.message)
+        setLoading(false)
+      } else if (user) {
+        // Generate random test results for the new user
+        await generateRandomTestResults(user.id)
+        
+        // Success! Navigate to login
+        onNavigate('login')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to create account')
       setLoading(false)
-    } else if (user) {
-      // Success! Navigate to login
-      onNavigate('login')
     }
   }
 

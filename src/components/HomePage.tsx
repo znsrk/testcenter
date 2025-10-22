@@ -87,7 +87,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       {/* Header/Navbar */}
       <header className="relative z-50 bg-white/80 backdrop-blur-sm shadow-sm">
         <div className="container mx-auto flex h-[70px] items-center justify-between px-6">
-          <h1 className="text-2xl font-bold text-[#007BFF]">Ұлттық Тестілеу Орталығы</h1>
+          <h1 className="text-2xl font-bold text-[#007BFF]">Zhan English Center</h1>
           <div className="relative" ref={profileRef}>
             <button onClick={() => setProfileOpen(!isProfileOpen)} aria-label="User Profile"><UserIcon /></button>
             <div className={`absolute right-0 mt-2 w-80 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 transition-all duration-200 ease-out ${isProfileOpen ? 'transform opacity-100 scale-100' : 'transform opacity-0 scale-95 pointer-events-none'}`} role="menu">
@@ -149,9 +149,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       {/* Footer */}
       <footer className="relative z-10 w-full py-4">
         <div className="container mx-auto flex justify-center items-center space-x-6 px-6">
-          <a href="#" className="text-sm text-gray-500 hover:text-[#007BFF]">Құпиялылық саясаты</a>
-          <a href="#" className="text-sm text-gray-500 hover:text-[#007BFF]">Пайдалану шарттары</a>
-          <a href="#" className="text-sm text-gray-500 hover:text-[#007BFF]">Байланыс</a>
+          <a href="https://wa.me/77083942132" className="text-sm text-gray-500 hover:text-[#007BFF]">Байланыс WhatsApp</a>
         </div>
       </footer>
     </div>
