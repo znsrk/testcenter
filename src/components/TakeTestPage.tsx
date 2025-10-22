@@ -26,7 +26,7 @@ export function TakeTestPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Inline runner (optional), main flow is route /test/:id
+  // Inline runner (optional)
   const [activeTestId, setActiveTestId] = useState<string | null>(null)
   const [activeTestName, setActiveTestName] = useState<string>('')
   const [content, setContent] = useState<TestContent | null>(null)
@@ -167,6 +167,11 @@ export function TakeTestPage() {
                   to={`/test/${t.id}`}
                   className={`block w-full text-left px-4 py-3 rounded-lg border transition
                     ${activeTestId === t.id ? 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1D4ED8]' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+                  onClick={(e) => {
+                    // Keep inline runner; prevent navigation and load inline
+                    e.preventDefault()
+                    selectTest(t.id)
+                  }}
                 >
                   <div className="font-semibold">{t.name}</div>
                   {t.description && <div className="text-sm text-gray-500">{t.description}</div>}
@@ -217,7 +222,7 @@ export function TakeTestPage() {
             {!activeTestId && (
               <div className="rounded-lg border border-gray-200 p-6">
                 <p className="text-gray-600">
-                  Click a test on the left to open it on a dedicated page.
+                  Click a test on the left to open it here inline, or navigate directly to /test/:id.
                 </p>
               </div>
             )}
