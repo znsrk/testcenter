@@ -10,7 +10,6 @@ interface RegistrationPageProps {
 export function RegistrationPage({ onNavigate }: RegistrationPageProps) {
   const [formData, setFormData] = useState({
     fullName: '',
-    iin: '',
     city: '',
     testType: ''
   });
@@ -26,7 +25,7 @@ export function RegistrationPage({ onNavigate }: RegistrationPageProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.fullName && formData.iin && formData.city && formData.testType && agreedToTerms) {
+    if (formData.fullName && formData.city && formData.testType && agreedToTerms) {
       onNavigate('success');
     }
   };
@@ -68,17 +67,6 @@ export function RegistrationPage({ onNavigate }: RegistrationPageProps) {
               onChange={(e) => handleInputChange('fullName', e.target.value)}
               required
             />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <InputField
-              placeholder="ЖСН"
-              value={formData.iin}
-              onChange={(e) => handleInputChange('iin', e.target.value)}
-              type="text"
-              required
-            />
-            <p className="text-sm text-[#9CA3AF] ml-2">ЖСН 12 цифр</p>
           </div>
 
           <div className="flex flex-col gap-2">

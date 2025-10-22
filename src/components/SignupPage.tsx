@@ -10,7 +10,6 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [iin, setIIN] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -23,10 +22,6 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
     }
     if (!lastName.trim()) {
       setError('Last name is required')
-      return false
-    }
-    if (!/^[0-9]{12}$/.test(iin)) {
-      setError('IIN must be exactly 12 digits')
       return false
     }
     if (password.length < 6) {
@@ -55,8 +50,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
         email,
         password,
         firstName,
-        lastName,
-        iin
+        lastName
       })
 
       if (authError) {
@@ -123,26 +117,6 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
                   placeholder="Жарылғасын"
                 />
               </div>
-            </div>
-
-            <div>
-              <label htmlFor="iin" className="block text-sm font-medium text-gray-700 mb-2">
-                ЖСН (IIN)
-              </label>
-              <input
-                id="iin"
-                type="text"
-                required
-                value={iin}
-                onChange={(e) => setIIN(e.target.value.replace(/\D/g, '').slice(0, 12))}
-                disabled={loading}
-                maxLength={12}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                placeholder="070101500123"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                12 цифр (12 digits)
-              </p>
             </div>
 
             <div>

@@ -97,7 +97,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
                   <p className="text-xs text-gray-500 break-all mt-1">{userDetails.email}</p>
                 </div>
                 <div className="px-4 py-3 text-sm text-gray-700 space-y-2">
-                  <p><span className="font-semibold">ЖСН:</span> {userDetails.iin}</p>
                   <p><span className="font-semibold">ID:</span> {userDetails.id.slice(0, 8)}...</p>
                 </div>
                 <div className="border-t border-gray-200">

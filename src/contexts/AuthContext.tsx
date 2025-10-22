@@ -6,7 +6,6 @@ interface User {
   email: string
   first_name?: string
   last_name?: string
-  iin?: string
 }
 
 interface AuthContextType {

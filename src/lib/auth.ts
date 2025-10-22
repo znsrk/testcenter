@@ -6,7 +6,6 @@ export interface User {
   email: string
   first_name?: string
   last_name?: string
-  iin?: string
   created_at: string
 }
 
@@ -19,7 +18,6 @@ export interface SignUpData {
   password: string
   firstName: string
   lastName: string
-  iin: string
 }
 
 export async function signUp(data: SignUpData): Promise<{ user?: User; error?: AuthError }> {
@@ -32,8 +30,7 @@ export async function signUp(data: SignUpData): Promise<{ user?: User; error?: A
         email: data.email,
         password_hash: hashedPassword,
         first_name: data.firstName,
-        last_name: data.lastName,
-        iin: data.iin
+        last_name: data.lastName
       }])
       .select()
       .single()
@@ -71,7 +68,6 @@ export async function login(email: string, password: string): Promise<{ user?: U
     localStorage.setItem('userEmail', data.email)
     if (data.first_name) localStorage.setItem('userFirstName', data.first_name)
     if (data.last_name) localStorage.setItem('userLastName', data.last_name)
-    if (data.iin) localStorage.setItem('userIIN', data.iin)
     
     return { user: data }
   } catch (err: any) {
@@ -84,7 +80,6 @@ export function logout(): void {
   localStorage.removeItem('userEmail')
   localStorage.removeItem('userFirstName')
   localStorage.removeItem('userLastName')
-  localStorage.removeItem('userIIN')
 }
 
 export function getCurrentUser(): User | null {
@@ -92,7 +87,6 @@ export function getCurrentUser(): User | null {
   const userEmail = localStorage.getItem('userEmail')
   const firstName = localStorage.getItem('userFirstName')
   const lastName = localStorage.getItem('userLastName')
-  const iin = localStorage.getItem('userIIN')
   
   if (userId && userEmail) {
     return {
@@ -100,7 +94,6 @@ export function getCurrentUser(): User | null {
       email: userEmail,
       first_name: firstName || undefined,
       last_name: lastName || undefined,
-      iin: iin || undefined,
       created_at: ''
     }
   }
