@@ -113,7 +113,19 @@ export default function TestPage() {
                     <p className="text-sm text-gray-500 mb-1">Section {si + 1}</p>
                     <h4 className="font-semibold mb-2">{sec.name}</h4>
                     {sec.description ? (
-                      <p className="text-sm text-gray-600 mb-3 whitespace-pre-wrap">{sec.description}</p>
+                      <div
+                        className="text-sm text-gray-600 mb-3"
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: 120,
+                          overflow: 'auto',
+                          wordBreak: 'break-word',
+                          whiteSpace: 'pre-line',
+                        }}
+                        title={sec.description}
+                      >
+                        {sec.description}
+                      </div>
                     ) : null}
                     <div className="space-y-4">
                       {sec.questions.map((q, qi) => (
