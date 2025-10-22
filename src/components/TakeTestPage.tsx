@@ -65,6 +65,7 @@ export function TakeTestPage() {
     () => content?.sections.reduce((s, sec) => s + sec.questions.reduce((qsum, q) => qsum + q.maxScore, 0), 0) ?? 0,
     [content]
   )
+
   const score = useMemo(() => {
     if (!submitted || !content) return 0
     return scoreAnswers(content, answers).totalScore
@@ -159,6 +160,12 @@ export function TakeTestPage() {
                   to={`/test/${t.id}`}
                   className={`block w-full text-left px-4 py-3 rounded-lg border transition
                     ${activeTestId === t.id ? 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1D4ED8]' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+                  onClick={(e) => {
+                    // Optional: also support inline runner by preloading
+                    // Remove this if you only want navigation
+                    e.preventDefault()
+                    selectTest(t.id)
+                  }}
                 >
                   <div className="font-semibold">{t.name}</div>
                   {t.description && <div className="text-sm text-gray-500">{t.description}</div>}
@@ -209,7 +216,7 @@ export function TakeTestPage() {
             {!activeTestId && (
               <div className="rounded-lg border border-gray-200 p-6">
                 <p className="text-gray-600">
-                  Select a test on the left to open it, or click to navigate to a dedicated page.
+                  Select a test on the left to open it here (inline), or navigate to a dedicated page.
                 </p>
               </div>
             )}
@@ -250,7 +257,9 @@ export function TakeTestPage() {
                         </div>
                       ))}
                     </div>
+                  </div>
                 ))}
+
                 <button
                   type="submit"
                   disabled={submitting || !user?.id}
