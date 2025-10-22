@@ -111,7 +111,10 @@ export default function TestPage() {
                 {content.sections.map((sec, si) => (
                   <div key={si} className="rounded-lg border border-gray-200 p-4">
                     <p className="text-sm text-gray-500 mb-1">Section {si + 1}</p>
-                    <h4 className="font-semibold mb-3">{sec.name}</h4>
+                    <h4 className="font-semibold mb-2">{sec.name}</h4>
+                    {sec.description ? (
+                      <p className="text-sm text-gray-600 mb-3 whitespace-pre-wrap">{sec.description}</p>
+                    ) : null}
                     <div className="space-y-4">
                       {sec.questions.map((q, qi) => (
                         <div key={q.id} className="rounded-md border border-gray-200 p-3">

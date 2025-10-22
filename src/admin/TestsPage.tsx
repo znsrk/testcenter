@@ -44,6 +44,7 @@ const SAMPLE_CONTENT_JSON = JSON.stringify(
     sections: [
       {
         name: 'General Knowledge',
+        description: 'Answer the following general knowledge questions.',
         questions: [
           {
             id: 'gk1',
@@ -71,6 +72,7 @@ const SAMPLE_CONTENT_JSON = JSON.stringify(
       },
       {
         name: 'English',
+        description: 'Choose the correct option for each question.',
         questions: [
           {
             id: 'en1',
@@ -113,7 +115,7 @@ export default function TestsPage() {
     time_limit_minutes: '',
     is_published: false,
     // Updated default to a valid structure the runner expects
-    contentText: '{\n  "sections": [\n    {\n      "name": "Section 1",\n      "questions": []\n    }\n  ]\n}',
+    contentText: '{\n  "sections": [\n    {\n      "name": "Section 1",\n      "description": "",\n      "questions": []\n    }\n  ]\n}',
   });
 
   const [creating, setCreating] = useState(false);
@@ -122,10 +124,10 @@ export default function TestsPage() {
   const [builderEnabled, setBuilderEnabled] = useState(true);
   const [builderModel, setBuilderModel] = useState<TestContent>(() => {
     try {
-      const parsed = JSON.parse('{ "sections": [ { "name": "Section 1", "questions": [] } ] }');
+      const parsed = JSON.parse('{ "sections": [ { "name": "Section 1", "description": "", "questions": [] } ] }');
       return coerceContent(parsed);
     } catch {
-      return { sections: [ { name: 'Section 1', questions: [] } ] };
+      return { sections: [ { name: 'Section 1', description: '', questions: [] } ] };
     }
   });
 
@@ -137,9 +139,9 @@ export default function TestsPage() {
     try {
       const parsed = JSON.parse(form.contentText || '{}');
       const coerced = coerceContent(parsed);
-      setBuilderModel(coerced && Array.isArray(coerced.sections) ? coerced : { sections: [ { name: 'Section 1', questions: [] } ] });
+      setBuilderModel(coerced && Array.isArray(coerced.sections) ? coerced : { sections: [ { name: 'Section 1', description: '', questions: [] } ] });
     } catch {
-      setBuilderModel({ sections: [ { name: 'Section 1', questions: [] } ] });
+      setBuilderModel({ sections: [ { name: 'Section 1', description: '', questions: [] } ] });
     }
     setBuilderEnabled(true);
   };
@@ -223,11 +225,11 @@ export default function TestsPage() {
       description: '',
       time_limit_minutes: '',
       is_published: false,
-      contentText: '{\n  "sections": [\n    {\n      "name": "Section 1",\n      "questions": []\n    }\n  ]\n}',
+      contentText: '{\n  "sections": [\n    {\n      "name": "Section 1",\n      "description": "",\n      "questions": []\n    }\n  ]\n}',
     });
 
     // Reset builder to default
-    setBuilderModel({ sections: [ { name: 'Section 1', questions: [] } ] });
+    setBuilderModel({ sections: [ { name: 'Section 1', description: '', questions: [] } ] });
 
     await load();
   }
@@ -365,7 +367,7 @@ export default function TestsPage() {
                 />
               </label>
               <small style={{ color: '#666' }}>
-                Tip: Expected shape is {'{ sections: [ { name, questions: [...] } ] }'}. If you only have
+                Tip: Expected shape is {'{ sections: [ { name, description?, questions: [...] } ] }'}. If you only have
                 a top-level {'{ questions: [...] }'}, it will be wrapped into "Section 1".
               </small>
 

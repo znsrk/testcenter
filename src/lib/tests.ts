@@ -17,6 +17,7 @@ export interface QuestionDefinition {
 
 export interface SectionDefinition {
   name: string
+  description?: string | null // NEW: optional section description
   questions: QuestionDefinition[]
 }
 
@@ -45,7 +46,7 @@ export function isAdminEmail(email?: string | null) {
 }
 
 function ensureQuestionIds(content: TestContent): TestContent {
-  // Ensure each question has a stable id
+  // Ensure each question has a stable id (preserves section description)
   const sections = content.sections.map((sec, si) => ({
     ...sec,
     questions: sec.questions.map((q, qi) => ({
@@ -54,38 +55,6 @@ function ensureQuestionIds(content: TestContent): TestContent {
     })),
   }))
   return { sections }
-}
-
-// NEW: normalize various legacy shapes to TestContent
-function normalizeToTestContent(raw: any): TestContent {
-  if (!raw) {
-    throw new Error('Invalid test content: expected content.sections[]')
-  }
-  // Already correct
-  if (Array.isArray(raw.sections)) {
-    return ensureQuestionIds({ sections: raw.sections })
-  }
-  // Legacy: top-level questions array
-  if (Array.isArray(raw.questions)) {
-    const sectionName =
-      typeof raw.name === 'string' && raw.name.trim().length > 0
-        ? raw.name
-        : 'Section 1'
-    return ensureQuestionIds({
-      sections: [
-        {
-          name: sectionName,
-          questions: raw.questions,
-        },
-      ],
-    })
-  }
-  // Sometimes content nested under "content"
-  if (raw.content && Array.isArray(raw.content.sections)) {
-    return ensureQuestionIds({ sections: raw.content.sections })
-  }
-  // Unsupported formats (e.g., IELTS passage/question_groups)
-  throw new Error('Invalid test content: expected content.sections[]')
 }
 
 export async function listPublishedTests(): Promise<{ data?: Pick<TestRecord, 'id'|'name'|'description'|'time_limit_minutes'>[]; error?: string }> {
@@ -108,16 +77,13 @@ export async function getTestById(id: string): Promise<{ data?: TestRecord; erro
     if (error || !data) return { error: error?.message || 'Test not found' }
 
     const rawContent = (data as any)?.content
-    let normalized: TestContent
-    try {
-      normalized = normalizeToTestContent(rawContent)
-    } catch (e: any) {
-      return { error: e?.message || 'Invalid test content' }
+    if (!rawContent || !Array.isArray(rawContent.sections)) {
+      return { error: 'Invalid test content: expected content.sections[]' }
     }
 
     const withIds: TestRecord = {
-      ...(data as any),
-      content: normalized,
+      ...data,
+      content: ensureQuestionIds(rawContent as TestContent),
     } as TestRecord
     return { data: withIds }
   } catch (e: any) {
@@ -135,12 +101,10 @@ export interface UploadTestJSON {
 
 export async function uploadTestFromJSON(json: UploadTestJSON, created_by?: string): Promise<{ id?: string; error?: string }> {
   try {
-    // Accept only the official shape for new uploads; normalize sections + ids
-    const normalizedContent = normalizeToTestContent(json.content)
     const normalized: UploadTestJSON = {
       ...json,
       is_published: json.is_published ?? true,
-      content: normalizedContent,
+      content: ensureQuestionIds(json.content),
     }
     const { data, error } = await supabase
       .from('tests')
@@ -196,17 +160,33 @@ export async function submitAttempt(params: {
   const scored = scoreAnswers(content, answers)
   const passed = scored.totalMax > 0 && (scored.totalScore / scored.totalMax) >= 0.6
 
+  const baseRow = {
+    user_id: userId,
+    test_name: testName,
+    score: scored.totalScore,
+    total_questions: content.sections.reduce((n, s) => n + s.questions.length, 0),
+    passed: passed,
+    test_date: new Date().toISOString().split('T')[0],
+  }
+
+  // Try with sections first
   const { error } = await supabase
     .from('test_results')
-    .insert([{
-      user_id: userId,
-      test_name: testName,
-      score: scored.totalScore,
-      total_questions: content.sections.reduce((n, s) => n + s.questions.length, 0),
-      passed: passed,
-      test_date: new Date().toISOString().split('T')[0],
-      sections: scored.sections
-    }])
-  if (error) return { error: error.message }
-  return {}
+    .insert([{ ...baseRow, sections: scored.sections }])
+
+  if (!error) return {}
+
+  const missingSections =
+    /sections/i.test(error.message) &&
+    (/does not exist/i.test(error.message) || /schema cache/i.test(error.message))
+
+  if (missingSections) {
+    const { error: err2 } = await supabase
+      .from('test_results')
+      .insert([baseRow])
+    if (err2) return { error: err2.message }
+    return {}
+  }
+
+  return { error: error.message }
 }

@@ -38,6 +38,7 @@ export default function TestBuilder({ value, onChange }: Props) {
     const next = clone(value)
     next.sections.push({
       name: `Section ${next.sections.length + 1}`,
+      description: '',
       questions: []
     } as SectionDefinition)
     onChange(next)
@@ -52,6 +53,12 @@ export default function TestBuilder({ value, onChange }: Props) {
   const updateSectionName = (si: number, name: string) => {
     const next = clone(value)
     next.sections[si].name = name
+    onChange(next)
+  }
+
+  const updateSectionDescription = (si: number, description: string) => {
+    const next = clone(value)
+    next.sections[si].description = description
     onChange(next)
   }
 
@@ -138,6 +145,16 @@ export default function TestBuilder({ value, onChange }: Props) {
             />
             <button type="button" onClick={() => addQuestion(si)}>+ Question</button>
             <button type="button" onClick={() => removeSection(si)} style={{ color: 'crimson' }}>Remove Section</button>
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <textarea
+              value={sec.description ?? ''}
+              onChange={(e) => updateSectionDescription(si, e.target.value)}
+              placeholder="Optional section description or instructions"
+              rows={3}
+              style={{ width: '100%', fontFamily: 'inherit' }}
+            />
           </div>
 
           {sec.questions.length === 0 ? (

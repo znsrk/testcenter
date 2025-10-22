@@ -48,7 +48,7 @@ export function TakeTestPage() {
         if (!listErr && data) setTests(data as TestListItem[])
         return {}
       })()
-      if (res.error) setError(res.error)
+      if ((res as any).error) setError((res as any).error)
     } catch (e: any) {
       setError(e.message || 'Failed to parse/upload JSON')
     }
@@ -116,6 +116,7 @@ export function TakeTestPage() {
     "sections": [
       {
         "name": "Mathematics",
+        "description": "Optional instructions for this section.",
         "questions": [
           {
             "id": "m1",
