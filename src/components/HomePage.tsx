@@ -2,12 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { ResultsPage } from './ResultsPage'
 import { TakeTestPage } from './TakeTestPage'
-import type { Page } from '../page'
-
-interface HomePageProps {
-  onNavigate: (page: Page) => void
-  initialTab?: 'results' | 'takeTest'
-}
 
 const UserIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600 hover:text-[#007BFF]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -23,15 +17,11 @@ const LogoutIcon = () => (
 
 type TabKey = 'results' | 'takeTest'
 
-export function HomePage({ onNavigate, initialTab = 'results' }: HomePageProps) {
+export function HomePage() {
   const [isProfileOpen, setProfileOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<TabKey>(initialTab)
+  const [activeTab, setActiveTab] = useState<TabKey>('results')
   const profileRef = useRef<HTMLDivElement>(null)
   const { user, logout } = useAuth()
-
-  useEffect(() => {
-    setActiveTab(initialTab)
-  }, [initialTab])
 
   const userDetails = {
     name: user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : 'User',
@@ -51,7 +41,6 @@ export function HomePage({ onNavigate, initialTab = 'results' }: HomePageProps) 
 
   const handleLogout = () => {
     logout()
-    onNavigate('login')
   }
 
   return (
@@ -129,7 +118,7 @@ export function HomePage({ onNavigate, initialTab = 'results' }: HomePageProps) 
         <main className="flex-1 p-6">
           <div className="mx-auto max-w-5xl">
             {activeTab === 'results' && (
-              <ResultsPage onNavigate={onNavigate} embedded />
+              <ResultsPage embedded />
             )}
             {activeTab === 'takeTest' && (
               <TakeTestPage />

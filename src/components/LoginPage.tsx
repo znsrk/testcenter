@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { login } from '../lib/auth'
-import type { Page } from '../page'
 
 interface LoginPageProps {
-  onNavigate: (page: Page) => void
+  onShowSignup: () => void
 }
 
-export function LoginPage({ onNavigate }: LoginPageProps) {
+export function LoginPage({ onShowSignup }: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +25,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
       setLoading(false)
     } else if (user) {
       setAuthUser(user)
-      onNavigate('home')
+      // AuthContext will update, App will show HomePage
     }
   }
 
@@ -90,7 +89,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
               Don't have an account?{' '}
               <button
                 type="button"
-                onClick={() => onNavigate('signup')}
+                onClick={onShowSignup}
                 className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
               >
                 Sign up

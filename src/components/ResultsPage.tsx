@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
 interface ResultsPageProps {
-  onNavigate: (page: string) => void
+  onNavigate?: (tab: string) => void // Make optional
   embedded?: boolean
 }
 
@@ -68,7 +68,7 @@ export function ResultsPage({ onNavigate, embedded = false }: ResultsPageProps) 
         <div className={`${embedded ? '' : 'max-w-4xl mx-auto'} px-4 py-8`}>
           {!embedded && (
             <button
-              onClick={() => onNavigate('home')}
+              onClick={() => onNavigate?.('home')}
               className="text-[#007BFF] hover:underline mb-4"
             >
               ← Back to Home
@@ -92,7 +92,7 @@ export function ResultsPage({ onNavigate, embedded = false }: ResultsPageProps) 
         {!embedded && (
           <>
             <button
-              onClick={() => onNavigate('home')}
+              onClick={() => onNavigate?.('home')}
               className="text-[#007BFF] hover:underline mb-4"
             >
               ← Back to Home

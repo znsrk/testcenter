@@ -3,10 +3,10 @@ import { signUp } from '../lib/auth'
 import { generateRandomTestResults } from '../lib/generateTestResults'
 
 interface SignupPageProps {
-  onNavigate: (page: Page) => void
+  onShowLogin: () => void
 }
 
-export function SignupPage({ onNavigate }: SignupPageProps) {
+export function SignupPage({ onShowLogin }: SignupPageProps) {
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -57,11 +57,8 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
         setError(authError.message)
         setLoading(false)
       } else if (user) {
-        // Generate random test results for the new user
         await generateRandomTestResults(user.id)
-        
-        // Success! Navigate to login
-        onNavigate('login')
+        onShowLogin()
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account')
@@ -155,7 +152,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="confirmPassword" className="block text sm font-medium text-gray-700 mb-2">
                 Confirm Password
               </label>
               <input
@@ -182,7 +179,7 @@ export function SignupPage({ onNavigate }: SignupPageProps) {
               Already have an account?{' '}
               <button
                 type="button"
-                onClick={() => onNavigate('login')}
+                onClick={onShowLogin}
                 className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
               >
                 Sign in
