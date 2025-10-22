@@ -55,7 +55,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
       ? `${user.first_name} ${user.last_name}` 
       : 'Қолданушы',
     email: user?.email || 'Unknown',
-    iin: user?.iin || 'N/A',
     id: user?.id || 'N/A',
   };
 
