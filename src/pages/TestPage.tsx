@@ -108,7 +108,7 @@ export default function TestPage() {
                   )}
                 </div>
 
-                {Array.isArray(content.sections) && content.sections.map((sec, si) => (
+                {content.sections.map((sec, si) => (
                   <div key={si} className="rounded-lg border border-gray-200 p-4">
                     <p className="text-sm text-gray-500 mb-1">Section {si + 1}</p>
                     <h4 className="font-semibold mb-3">{sec.name}</h4>

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import AdminGate from './AdminGate';
 import TestBuilder from './TestBuilder';
+import AdminResults from './AdminResults';
 import type { TestContent } from '../lib/tests';
 
 type TestRow = {
@@ -127,6 +128,9 @@ export default function TestsPage() {
       return { sections: [ { name: 'Section 1', questions: [] } ] };
     }
   });
+
+  // Admin results visibility
+  const [showResults, setShowResults] = useState(false);
 
   // Keep builder in sync when toggled on (load from current contentText)
   const enableBuilder = () => {
@@ -271,7 +275,18 @@ export default function TestsPage() {
   return (
     <AdminGate>
       <div style={{ maxWidth: 960, margin: '24px auto', padding: '0 16px' }}>
-        <h1 style={{ marginTop: 8 }}>Admin · Tests</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <h1 style={{ marginTop: 8 }}>Admin · Tests</h1>
+          <button type="button" onClick={() => setShowResults(s => !s)}>
+            {showResults ? 'Hide all results' : 'View all results'}
+          </button>
+        </div>
+
+        {showResults && (
+          <section style={{ margin: '24px 0' }}>
+            <AdminResults />
+          </section>
+        )}
 
         <section style={{ margin: '24px 0', padding: 16, border: '1px solid #eee', borderRadius: 8 }}>
           <h2 style={{ marginTop: 0 }}>Create test</h2>

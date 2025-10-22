@@ -1,17 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import {
-  getTestById,
-  isAdminEmail,
-  listPublishedTests,
-  scoreAnswers,
-  submitAttempt,
-  uploadTestFromJSON,
-  type AnswerKey,
-  type TestContent,
-  type UploadTestJSON
-} from '../lib/tests'
+import { isAdminEmail, listPublishedTests, uploadTestFromJSON, type UploadTestJSON } from '../lib/tests'
 
 interface TestListItem {
   id: string
@@ -26,14 +16,6 @@ export function TakeTestPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Inline runner (optional)
-  const [activeTestId, setActiveTestId] = useState<string | null>(null)
-  const [activeTestName, setActiveTestName] = useState<string>('')
-  const [content, setContent] = useState<TestContent | null>(null)
-  const [answers, setAnswers] = useState<Record<string, AnswerKey | undefined>>({})
-  const [submitted, setSubmitted] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-
   const admin = isAdminEmail(user?.email)
 
   useEffect(() => {
@@ -47,61 +29,6 @@ export function TakeTestPage() {
     load()
   }, [])
 
-  const selectTest = async (id: string) => {
-    try {
-      setError(null)
-      setActiveTestId(id)
-      setSubmitted(false)
-      setAnswers({})
-      const { data, error } = await getTestById(id)
-      if (error || !data) {
-        setError(error || 'Failed to load test')
-        setContent(null)
-        setActiveTestName('')
-        return
-      }
-      setContent(data.content)
-      setActiveTestName(data.name)
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load test')
-      setContent(null)
-      setActiveTestName('')
-    }
-  }
-
-  const totalMax = useMemo(
-    () => content?.sections.reduce((s, sec) => s + sec.questions.reduce((qsum, q) => qsum + q.maxScore, 0), 0) ?? 0,
-    [content]
-  )
-  const score = useMemo(() => {
-    if (!submitted || !content) return 0
-    return scoreAnswers(content, answers).totalScore
-  }, [submitted, content, answers])
-
-  const handleSelect = (qid: string, key: AnswerKey) => {
-    setAnswers(prev => ({ ...prev, [qid]: key }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!content || !user?.id) return
-    setSubmitting(true)
-    const { error } = await submitAttempt({
-      userId: user.id,
-      testName: activeTestName || 'Test',
-      content,
-      answers
-    })
-    setSubmitting(false)
-    setSubmitted(true)
-    if (error) setError(error)
-  }
-
-  const reset = () => {
-    setAnswers({})
-    setSubmitted(false)
-  }
-
   const handleUpload = async (file?: File | null) => {
     if (!file || !user?.id) return
     setError(null)
@@ -113,15 +40,15 @@ export function TakeTestPage() {
         setError('Invalid test JSON: missing name or sections')
         return
       }
-      const { error } = await (async () => {
-        const res = await uploadTestFromJSON(parsed, user.id)
-        if (res.error) return { error: res.error }
+      const res = await (async () => {
+        const r = await uploadTestFromJSON(parsed, user.id)
+        if (r.error) return { error: r.error }
         // refresh list
         const { data, error: listErr } = await listPublishedTests()
         if (!listErr && data) setTests(data as TestListItem[])
         return {}
       })()
-      if (error) setError(error)
+      if (res.error) setError(res.error)
     } catch (e: any) {
       setError(e.message || 'Failed to parse/upload JSON')
     }
@@ -165,13 +92,7 @@ export function TakeTestPage() {
                 <Link
                   key={t.id}
                   to={`/test/${t.id}`}
-                  className={`block w-full text-left px-4 py-3 rounded-lg border transition
-                    ${activeTestId === t.id ? 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1D4ED8]' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
-                  onClick={(e) => {
-                    // Keep inline runner; prevent navigation and load inline
-                    e.preventDefault()
-                    selectTest(t.id)
-                  }}
+                  className="block w-full text-left px-4 py-3 rounded-lg border transition bg-white border-gray-200 hover:bg-gray-50"
                 >
                   <div className="font-semibold">{t.name}</div>
                   {t.description && <div className="text-sm text-gray-500">{t.description}</div>}
@@ -217,84 +138,12 @@ export function TakeTestPage() {
             )}
           </aside>
 
-          {/* Optional inline runner (guarded) */}
           <section className="lg:col-span-8">
-            {!activeTestId && (
-              <div className="rounded-lg border border-gray-200 p-6">
-                <p className="text-gray-600">
-                  Click a test on the left to open it here inline, or navigate directly to /test/:id.
-                </p>
-              </div>
-            )}
-
-            {activeTestId && content && Array.isArray(content.sections) && !submitted && (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="rounded-lg border border-gray-200 p-4">
-                  <h3 className="text-xl font-semibold">{activeTestName}</h3>
-                  {totalMax > 0 && (
-                    <p className="text-sm text-gray-500 mt-1">Total points: {totalMax}</p>
-                  )}
-                </div>
-
-                {content.sections.map((sec, si) => (
-                  <div key={si} className="rounded-lg border border-gray-200 p-4">
-                    <p className="text-sm text-gray-500 mb-1">Section {si + 1}</p>
-                    <h4 className="font-semibold mb-3">{sec.name}</h4>
-                    <div className="space-y-4">
-                      {sec.questions.map((q, qi) => (
-                        <div key={q.id} className="rounded-md border border-gray-200 p-3">
-                          <p className="text-sm text-gray-500 mb-1">Question {qi + 1}</p>
-                          <p className="font-medium mb-3">{q.text}</p>
-                          <div className="space-y-2">
-                            {q.choices.map((c) => (
-                              <label key={c.key} className="flex items-center gap-3 rounded-md border border-gray-200 p-2 hover:bg-gray-50 cursor-pointer">
-                                <input
-                                  type="radio"
-                                  name={q.id}
-                                  value={c.key}
-                                  checked={answers[q.id] === c.key}
-                                  onChange={() => handleSelect(q.id, c.key)}
-                                  className="h-4 w-4 text-[#007BFF] focus:ring-[#007BFF]"
-                                />
-                                <span>{c.label}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-
-                <button
-                  type="submit"
-                  disabled={submitting || !user?.id}
-                  className="bg-[#007BFF] text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {submitting ? 'Submitting...' : 'Submit'}
-                </button>
-              </form>
-            )}
-
-            {activeTestId && content && !Array.isArray(content.sections) && (
-              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
-                Invalid test content: expected content.sections[]
-              </div>
-            )}
-
-            {activeTestId && content && submitted && (
-              <div className="space-y-6">
-                <div className="rounded-lg border border-gray-200 p-4">
-                  <h3 className="text-lg font-semibold">Your Score</h3>
-                  <p className="text-2xl mt-2">
-                    {score} / {totalMax} ({Math.round((score / (totalMax || 1)) * 100)}%)
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={reset} className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">Retake</button>
-                </div>
-              </div>
-            )}
+            <div className="rounded-lg border border-gray-200 p-6">
+              <p className="text-gray-600">
+                Click a test on the left to open it on a dedicated page.
+              </p>
+            </div>
           </section>
         </div>
       </div>
