@@ -5,6 +5,7 @@ import { TakeTestPage } from './TakeTestPage'
 
 interface HomePageProps {
   onNavigate: (page: string) => void
+  initialTab?: 'results' | 'takeTest'
 }
 
 const UserIcon = () => (
@@ -21,11 +22,15 @@ const LogoutIcon = () => (
 
 type TabKey = 'results' | 'takeTest'
 
-export function HomePage({ onNavigate }: HomePageProps) {
+export function HomePage({ onNavigate, initialTab = 'results' }: HomePageProps) {
   const [isProfileOpen, setProfileOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<TabKey>('results')
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab)
   const profileRef = useRef<HTMLDivElement>(null)
   const { user, logout } = useAuth()
+
+  useEffect(() => {
+    setActiveTab(initialTab)
+  }, [initialTab])
 
   const userDetails = {
     name: user?.first_name && user?.last_name ? `${user.first_name} ${user.last_name}` : 'User',

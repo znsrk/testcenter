@@ -7,15 +7,23 @@ import { ResultsPage } from './components/ResultsPage'
 import { LoginPage } from './components/LoginPage'
 import { SignupPage } from './components/SignupPage'
 
+type Page =
+  | 'home'
+  | 'home-takeTest'
+  | 'registration'
+  | 'success'
+  | 'results'
+  | 'login'
+  | 'signup'
+
 function AppContent() {
-  const [currentPage, setCurrentPage] = useState('home')
+  const [currentPage, setCurrentPage] = useState<Page>('home')
   const { isAuthenticated } = useAuth()
 
-  const handleNavigate = (page: string) => {
+  const handleNavigate = (page: Page) => {
     setCurrentPage(page)
   }
 
-  // If not authenticated, only show login/signup
   if (!isAuthenticated) {
     return (
       <div className="size-full">
@@ -28,15 +36,13 @@ function AppContent() {
     )
   }
 
-  // If authenticated, show all pages
   return (
     <div className="size-full">
       {currentPage === 'home' && <HomePage onNavigate={handleNavigate} />}
+      {currentPage === 'home-takeTest' && <HomePage onNavigate={handleNavigate} initialTab="takeTest" />}
       {currentPage === 'registration' && <RegistrationPage onNavigate={handleNavigate} />}
       {currentPage === 'success' && <SuccessPage onNavigate={handleNavigate} />}
       {currentPage === 'results' && <ResultsPage onNavigate={handleNavigate} />}
-      {currentPage === 'info' && <InfoPage onNavigate={handleNavigate} />}
-      {currentPage === 'schedule' && <SchedulePage onNavigate={handleNavigate} />}
     </div>
   )
 }
