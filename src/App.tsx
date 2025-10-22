@@ -6,15 +6,7 @@ import { SuccessPage } from './components/SuccessPage'
 import { ResultsPage } from './components/ResultsPage'
 import { LoginPage } from './components/LoginPage'
 import { SignupPage } from './components/SignupPage'
-
-type Page =
-  | 'home'
-  | 'home-takeTest'
-  | 'registration'
-  | 'success'
-  | 'results'
-  | 'login'
-  | 'signup'
+import type { Page } from './types/navigation'
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('home')

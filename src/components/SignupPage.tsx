@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { signUp } from '../lib/auth'
 import { generateRandomTestResults } from '../lib/generateTestResults'
+import type { Page } from '../types/navigation'
 
 interface SignupPageProps {
-  onNavigate: (page: string) => void
+  onNavigate: (page: Page) => void
 }
 
 export function SignupPage({ onNavigate }: SignupPageProps) {

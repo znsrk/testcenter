@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { login } from '../lib/auth'
+import type { Page } from '../types/navigation'
 
 interface LoginPageProps {
-  onNavigate: (page: string) => void
+  onNavigate: (page: Page) => void
 }
 
 export function LoginPage({ onNavigate }: LoginPageProps) {
