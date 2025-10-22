@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { ResultsPage } from './ResultsPage'
 import { TakeTestPage } from './TakeTestPage'
-import type { Page } from '../types/navigation'
 
 interface HomePageProps {
   onNavigate: (page: Page) => void

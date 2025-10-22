@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { login } from '../lib/auth'
-import type { Page } from '../types/navigation'
 
 interface LoginPageProps {
   onNavigate: (page: Page) => void
