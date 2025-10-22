@@ -48,7 +48,7 @@ export function HomePage() {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur border-b border-gray-200">
         <div className="mx-auto flex h-14 items-center justify-between px-4">
-          <h1 className="text-xl font-bold text-[#007BFF]">National Testing Center</h1>
+          <h1 className="text-xl font-bold text-[#007BFF]">EnglishProfTest</h1>
           <div className="relative" ref={profileRef}>
             <button onClick={() => setProfileOpen(!isProfileOpen)} aria-label="User Profile" className="flex items-center gap-2">
               <UserIcon />
