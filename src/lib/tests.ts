@@ -17,7 +17,7 @@ export interface QuestionDefinition {
 
 export interface SectionDefinition {
   name: string
-  description?: string | null // NEW: optional section description
+  description?: string | null
   questions: QuestionDefinition[]
 }
 
@@ -46,7 +46,6 @@ export function isAdminEmail(email?: string | null) {
 }
 
 function ensureQuestionIds(content: TestContent): TestContent {
-  // Ensure each question has a stable id (preserves section description)
   const sections = content.sections.map((sec, si) => ({
     ...sec,
     questions: sec.questions.map((q, qi) => ({
@@ -125,6 +124,31 @@ export async function uploadTestFromJSON(json: UploadTestJSON, created_by?: stri
   }
 }
 
+// NEW: Edit/update an existing test
+export interface UpdateTestInput {
+  id: string
+  name?: string
+  description?: string | null
+  time_limit_minutes?: number | null
+  is_published?: boolean
+  content?: TestContent
+}
+
+export async function updateTest(input: UpdateTestInput): Promise<{ error?: string }> {
+  const { id, content, ...rest } = input
+  if (!id) return { error: 'Missing id' }
+  const payload: Record<string, any> = { ...rest }
+  if (content) {
+    payload.content = ensureQuestionIds(content)
+  }
+  const { error } = await supabase
+    .from('tests')
+    .update(payload)
+    .eq('id', id)
+  if (error) return { error: error.message }
+  return {}
+}
+
 export interface SubmissionResult {
   totalMax: number
   totalScore: number
@@ -169,7 +193,6 @@ export async function submitAttempt(params: {
     test_date: new Date().toISOString().split('T')[0],
   }
 
-  // Try with sections first
   const { error } = await supabase
     .from('test_results')
     .insert([{ ...baseRow, sections: scored.sections }])

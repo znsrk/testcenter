@@ -10,6 +10,9 @@ interface TestListItem {
   time_limit_minutes?: number | null
 }
 
+// --- Timer Hook for Live Countdown ---
+// REMOVE unused hook to avoid TS warning
+
 export function TakeTestPage() {
   const { user } = useAuth()
   const [tests, setTests] = useState<TestListItem[]>([])
@@ -17,6 +20,11 @@ export function TakeTestPage() {
   const [error, setError] = useState<string | null>(null)
 
   const admin = isAdminEmail(user?.email)
+
+  // --- For Demo: Track which test's timer is running ---
+  const [activeTimer, setActiveTimer] = useState<string | null>(null)
+  // --- Timer state per test ---
+  const [timerMap, setTimerMap] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const load = async () => {
@@ -28,6 +36,38 @@ export function TakeTestPage() {
     }
     load()
   }, [])
+
+  // --- Start timer for selected test ---
+  function handleStartTimer(testId: string, minutes?: number) {
+    if (!minutes) return
+    setActiveTimer(testId)
+    setTimerMap((prev) => ({
+      ...prev,
+      [testId]: minutes * 60,
+    }))
+  }
+
+  // --- Timer effect ---
+  useEffect(() => {
+    // Fix: Only index timerMap when activeTimer is not null
+    if (!activeTimer) return
+    if (typeof timerMap[activeTimer] !== 'number' || timerMap[activeTimer] <= 0) return
+    const interval = setInterval(() => {
+      setTimerMap((prev) => ({
+        ...prev,
+        [activeTimer!]: prev[activeTimer!] > 0 ? prev[activeTimer!] - 1 : 0,
+      }))
+    }, 1000)
+    return () => clearInterval(interval)
+    // Dependency: timerMap[activeTimer ?? ""] is always a string
+  }, [activeTimer, timerMap, timerMap[activeTimer ?? ""]])
+
+  // --- Format timer display ---
+  function formatTimer(seconds: number) {
+    const min = Math.floor(seconds / 60)
+    const sec = seconds % 60
+    return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`
+  }
 
   const handleUpload = async (file?: File | null) => {
     if (!file || !user?.id) return
@@ -89,17 +129,54 @@ export function TakeTestPage() {
                 <p className="text-gray-500">No tests available yet.</p>
               )}
               {tests.map((t) => (
-                <Link
+                <div
                   key={t.id}
-                  to={`/test/${t.id}`}
                   className="block w-full text-left px-4 py-3 rounded-lg border transition bg-white border-gray-200 hover:bg-gray-50"
+                  style={{ position: 'relative' }}
                 >
-                  <div className="font-semibold">{t.name}</div>
-                  {t.description && <div className="text-sm text-gray-500">{t.description}</div>}
+                  <Link
+                    to={`/test/${t.id}`}
+                    className="font-semibold block mb-1"
+                  >
+                    {t.name}
+                  </Link>
+                  {/* Description: Scaled and truncated */}
+                  {t.description && (
+                    <div
+                      className="text-sm text-gray-500 mb-2"
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: 80,
+                        overflow: 'auto',
+                        wordBreak: 'break-word',
+                        whiteSpace: 'pre-line',
+                      }}
+                      title={t.description}
+                    >
+                      {t.description}
+                    </div>
+                  )}
+                  {/* Time limit + Live Timer */}
                   {t.time_limit_minutes ? (
-                    <div className="text-xs text-gray-400 mt-1">{t.time_limit_minutes} min</div>
+                    <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+                      <span>{t.time_limit_minutes} min</span>
+                      {/* Demo: Start timer button & live countdown */}
+                      <button
+                        className="ml-2 px-2 py-1 rounded bg-[#EFF6FF] hover:bg-[#BFDBFE] text-[#1D4ED8] text-xs font-semibold"
+                        onClick={() => handleStartTimer(t.id, t.time_limit_minutes || undefined)}
+                        disabled={activeTimer === t.id}
+                        style={{ minWidth: 60 }}
+                      >
+                        {activeTimer === t.id ? 'Running...' : 'Start Timer'}
+                      </button>
+                      {activeTimer === t.id && typeof timerMap[t.id] === 'number' && timerMap[t.id] >= 0 && (
+                        <span className="ml-2 font-mono text-[#007BFF] text-xs">
+                          {formatTimer(timerMap[t.id])}
+                        </span>
+                      )}
+                    </div>
                   ) : null}
-                </Link>
+                </div>
               ))}
             </div>
 
@@ -143,6 +220,8 @@ export function TakeTestPage() {
             <div className="rounded-lg border border-gray-200 p-6">
               <p className="text-gray-600">
                 Click a test on the left to open it on a dedicated page.
+                <br/>
+                {/* TODO: Move the live timer to your actual test-taking page, near the test questions! */}
               </p>
             </div>
           </section>

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import AdminGate from './AdminGate';
 import TestBuilder from './TestBuilder';
 import AdminResults from './AdminResults';
+import EditTestPanel from './EditTestPanel';
 import type { TestContent } from '../lib/tests';
 
 type TestRow = {
@@ -31,7 +32,6 @@ function coerceContent(input: any): any {
   if (Array.isArray(input.questions)) {
     return { sections: [{ name: 'Section 1', questions: input.questions }] };
   }
-  // If content was mistakenly wrapped again, try to unwrap one level
   if (input.content && Array.isArray(input.content.sections)) {
     return input.content;
   }
@@ -134,6 +134,9 @@ export default function TestsPage() {
   // Admin results visibility
   const [showResults, setShowResults] = useState(false);
 
+  // Edit panel
+  const [editing, setEditing] = useState<TestRow | null>(null);
+
   // Keep builder in sync when toggled on (load from current contentText)
   const enableBuilder = () => {
     try {
@@ -208,7 +211,6 @@ export default function TestsPage() {
       time_limit_minutes: timeLimit,
       is_published: form.is_published,
       content,
-      // created_by can be set later if you add auth; keeping null for simplicity
     };
 
     const { error } = await supabase.from('tests').insert([payload]);
@@ -266,7 +268,6 @@ export default function TestsPage() {
       is_published: true,
       contentText: SAMPLE_CONTENT_JSON,
     }));
-    // Also load into builder if enabled
     try {
       const parsed = JSON.parse(SAMPLE_CONTENT_JSON);
       const coerced = coerceContent(parsed);
@@ -287,6 +288,16 @@ export default function TestsPage() {
         {showResults && (
           <section style={{ margin: '24px 0' }}>
             <AdminResults />
+          </section>
+        )}
+
+        {editing && (
+          <section style={{ margin: '24px 0' }}>
+            <EditTestPanel
+              test={editing}
+              onClose={() => setEditing(null)}
+              onSaved={() => load()}
+            />
           </section>
         )}
 
@@ -398,6 +409,7 @@ export default function TestsPage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                     <strong>{t.name}</strong>
                     <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => setEditing(t)}>Edit</button>
                       <button onClick={() => togglePublish(t)}>
                         {t.is_published ? 'Unpublish' : 'Publish'}
                       </button>
