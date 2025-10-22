@@ -53,7 +53,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const userDetails = {
     name: user?.first_name && user?.last_name 
       ? `${user.first_name} ${user.last_name}` 
-      : 'Қолданушы',
+      : 'User',
     email: user?.email || 'Unknown',
     id: user?.id || 'N/A',
   };
@@ -117,7 +117,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       <main className="relative z-10 flex flex-grow items-center justify-center">
         <section className="w-full max-w-2xl px-6">
           <div className="mb-8 text-center">
-            <h2 className="text-3xl font-bold text-gray-800">Қош келдіңіз, {userDetails.name}!</h2>
+            <h2 className="text-3xl font-bold text-gray-800">Welcome, {userDetails.name}!</h2>
             <p className="mt-2 text-gray-600">{userDetails.email}</p>
           </div>
           
@@ -130,14 +130,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
             />
             <NavCard 
               icon={<ResultsIcon />}
-              title="Нәтижелер"
-              description="Өткен тесттеріңіздің нәтижелерімен танысыңыз."
+              title="Results"
+              description="Review your past test results."
               onClick={() => onNavigate('results')} 
             />
             <NavCard 
               icon={<InfoIcon />}
-              title="Маңызды Ақпарат"
-              description="Тестілеу орталығының контактілері."
+              title="Important Information"
+              description="Testing center contacts."
               onClick={() => onNavigate('info')} 
             />
           </div>
@@ -147,7 +147,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       {/* Footer */}
       <footer className="relative z-10 w-full py-4">
         <div className="container mx-auto flex justify-center items-center space-x-6 px-6">
-          <a href="https://wa.me/77083942132" className="text-sm text-gray-500 hover:text-[#007BFF]">Байланыс WhatsApp</a>
+          <a href="https://wa.me/77083942132" className="text-sm text-gray-500 hover:text-[#007BFF]">WhatsApp Contact</a>
         </div>
       </footer>
     </div>
