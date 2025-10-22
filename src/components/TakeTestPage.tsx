@@ -26,7 +26,7 @@ export function TakeTestPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // The inline runner is kept for now, but primary flow is to navigate to /test/:id
+  // Inline runner (optional), main flow is route /test/:id
   const [activeTestId, setActiveTestId] = useState<string | null>(null)
   const [activeTestName, setActiveTestName] = useState<string>('')
   const [content, setContent] = useState<TestContent | null>(null)
@@ -48,24 +48,31 @@ export function TakeTestPage() {
   }, [])
 
   const selectTest = async (id: string) => {
-    setError(null)
-    setActiveTestId(id)
-    setSubmitted(false)
-    setAnswers({})
-    const { data, error } = await getTestById(id)
-    if (error || !data) {
-      setError(error || 'Failed to load test')
-      return
+    try {
+      setError(null)
+      setActiveTestId(id)
+      setSubmitted(false)
+      setAnswers({})
+      const { data, error } = await getTestById(id)
+      if (error || !data) {
+        setError(error || 'Failed to load test')
+        setContent(null)
+        setActiveTestName('')
+        return
+      }
+      setContent(data.content)
+      setActiveTestName(data.name)
+    } catch (e: any) {
+      setError(e?.message || 'Failed to load test')
+      setContent(null)
+      setActiveTestName('')
     }
-    setContent(data.content)
-    setActiveTestName(data.name)
   }
 
   const totalMax = useMemo(
     () => content?.sections.reduce((s, sec) => s + sec.questions.reduce((qsum, q) => qsum + q.maxScore, 0), 0) ?? 0,
     [content]
   )
-
   const score = useMemo(() => {
     if (!submitted || !content) return 0
     return scoreAnswers(content, answers).totalScore
@@ -160,12 +167,6 @@ export function TakeTestPage() {
                   to={`/test/${t.id}`}
                   className={`block w-full text-left px-4 py-3 rounded-lg border transition
                     ${activeTestId === t.id ? 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1D4ED8]' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
-                  onClick={(e) => {
-                    // Optional: also support inline runner by preloading
-                    // Remove this if you only want navigation
-                    e.preventDefault()
-                    selectTest(t.id)
-                  }}
                 >
                   <div className="font-semibold">{t.name}</div>
                   {t.description && <div className="text-sm text-gray-500">{t.description}</div>}
@@ -211,17 +212,17 @@ export function TakeTestPage() {
             )}
           </aside>
 
-          {/* Keeping the inline panel for now for users who prefer not to navigate away */}
+          {/* Optional inline runner (guarded) */}
           <section className="lg:col-span-8">
             {!activeTestId && (
               <div className="rounded-lg border border-gray-200 p-6">
                 <p className="text-gray-600">
-                  Select a test on the left to open it here (inline), or navigate to a dedicated page.
+                  Click a test on the left to open it on a dedicated page.
                 </p>
               </div>
             )}
 
-            {activeTestId && content && !submitted && (
+            {activeTestId && content && Array.isArray(content.sections) && !submitted && (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="rounded-lg border border-gray-200 p-4">
                   <h3 className="text-xl font-semibold">{activeTestName}</h3>
@@ -268,6 +269,12 @@ export function TakeTestPage() {
                   {submitting ? 'Submitting...' : 'Submit'}
                 </button>
               </form>
+            )}
+
+            {activeTestId && content && !Array.isArray(content.sections) && (
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+                Invalid test content: expected content.sections[]
+              </div>
             )}
 
             {activeTestId && content && submitted && (

@@ -33,14 +33,8 @@ export default function TestPage() {
         if (error || !data) {
           setError(error || 'Failed to load test')
         } else {
-          // Basic validation to avoid silent failures
-          const sections = (data.content as any)?.sections
-          if (!Array.isArray(sections)) {
-            setError('Invalid test content: expected content.sections[]')
-          } else {
-            setContent(data.content)
-            setTestName(data.name)
-          }
+          setContent(data.content)
+          setTestName(data.name)
         }
         setLoading(false)
       }
@@ -114,7 +108,7 @@ export default function TestPage() {
                   )}
                 </div>
 
-                {content.sections.map((sec, si) => (
+                {Array.isArray(content.sections) && content.sections.map((sec, si) => (
                   <div key={si} className="rounded-lg border border-gray-200 p-4">
                     <p className="text-sm text-gray-500 mb-1">Section {si + 1}</p>
                     <h4 className="font-semibold mb-3">{sec.name}</h4>

@@ -67,18 +67,28 @@ export async function listPublishedTests(): Promise<{ data?: Pick<TestRecord, 'i
 }
 
 export async function getTestById(id: string): Promise<{ data?: TestRecord; error?: string }> {
-  const { data, error } = await supabase
-    .from('tests')
-    .select('*')
-    .eq('id', id)
-    .single()
-  if (error || !data) return { error: error?.message || 'Test not found' }
-  // Ensure IDs in content
-  const withIds: TestRecord = {
-    ...data,
-    content: ensureQuestionIds(data.content as TestContent),
-  } as TestRecord
-  return { data: withIds }
+  try {
+    const { data, error } = await supabase
+      .from('tests')
+      .select('*')
+      .eq('id', id)
+      .single()
+    if (error || !data) return { error: error?.message || 'Test not found' }
+
+    const rawContent = (data as any)?.content
+    if (!rawContent || !Array.isArray(rawContent.sections)) {
+      return { error: 'Invalid test content: expected content.sections[]' }
+    }
+
+    // Ensure IDs in content
+    const withIds: TestRecord = {
+      ...data,
+      content: ensureQuestionIds(rawContent as TestContent),
+    } as TestRecord
+    return { data: withIds }
+  } catch (e: any) {
+    return { error: e?.message || 'Failed to load test' }
+  }
 }
 
 export interface UploadTestJSON {
