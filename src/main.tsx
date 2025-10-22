@@ -1,17 +1,17 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import App from './App.tsx';
+import App from './App';
 import TestsPage from './admin/TestsPage';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/admin" element={<TestsPage />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   </React.StrictMode>
 );
