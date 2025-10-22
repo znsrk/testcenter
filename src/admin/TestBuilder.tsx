@@ -1,4 +1,3 @@
-import React from 'react'
 import type { TestContent, SectionDefinition, QuestionDefinition, Choice, AnswerKey } from '../lib/tests'
 
 type Props = {
@@ -99,14 +98,13 @@ export default function TestBuilder({ value, onChange }: Props) {
   const removeChoice = (si: number, qi: number, ci: number) => {
     const next = clone(value)
     const q = next.sections[si].questions[qi]
-    const wasKey = q.choices[ci].key
     q.choices.splice(ci, 1)
     q.choices = reletterChoices(q.choices)
     // If correct was removed, reset to first
     if (!q.choices.find(c => c.key === q.correct)) {
       q.correct = q.choices[0]?.key ?? 'A'
     }
-    // If the removed was the only one, ensure at least one remains
+    // If no choices remain, ensure defaults exist
     if (q.choices.length === 0) {
       q.choices = defaultChoices()
       q.correct = 'A'
