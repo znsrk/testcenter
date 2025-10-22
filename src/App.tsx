@@ -6,6 +6,7 @@ import { SuccessPage } from './components/SuccessPage'
 import { ResultsPage } from './components/ResultsPage'
 import { LoginPage } from './components/LoginPage'
 import { SignupPage } from './components/SignupPage'
+import type { Page } from './page'
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('home')

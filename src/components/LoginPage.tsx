@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { login } from '../lib/auth'
+import type { Page } from '../page'
 
 interface LoginPageProps {
   onNavigate: (page: Page) => void
@@ -24,7 +25,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
       setError(authError.message)
       setLoading(false)
     } else if (user) {
-      setAuthUser(user) // Update the AuthContext with the logged-in user
+      setAuthUser(user)
       onNavigate('home')
     }
   }
