@@ -4,8 +4,6 @@ import { HomePage } from './components/HomePage'
 import { RegistrationPage } from './components/RegistrationPage'
 import { SuccessPage } from './components/SuccessPage'
 import { ResultsPage } from './components/ResultsPage'
-import { InfoPage } from './components/InfoPage'
-import { SchedulePage } from './components/SchedulePage'
 import { LoginPage } from './components/LoginPage'
 import { SignupPage } from './components/SignupPage'
 
