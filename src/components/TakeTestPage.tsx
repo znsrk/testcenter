@@ -152,8 +152,7 @@ export function TakeTestPage() {
                       className="text-sm text-gray-500 mb-2"
                       style={{
                         maxWidth: '100%',
-                        maxHeight: 80,
-                        overflow: 'auto',
+                        // Remove maxHeight and overflow so it always expands fully
                         wordBreak: 'break-word',
                         whiteSpace: 'pre-line',
                       }}
@@ -220,8 +219,7 @@ export function TakeTestPage() {
                       className="text-sm text-gray-500 mb-2"
                       style={{
                         maxWidth: '100%',
-                        maxHeight: 80,
-                        overflow: 'auto',
+                        // Remove maxHeight and overflow so it always expands fully
                         wordBreak: 'break-word',
                         whiteSpace: 'pre-line',
                       }}
