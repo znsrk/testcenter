@@ -56,6 +56,38 @@ function ensureQuestionIds(content: TestContent): TestContent {
   return { sections }
 }
 
+// NEW: normalize various legacy shapes to TestContent
+function normalizeToTestContent(raw: any): TestContent {
+  if (!raw) {
+    throw new Error('Invalid test content: expected content.sections[]')
+  }
+  // Already correct
+  if (Array.isArray(raw.sections)) {
+    return ensureQuestionIds({ sections: raw.sections })
+  }
+  // Legacy: top-level questions array
+  if (Array.isArray(raw.questions)) {
+    const sectionName =
+      typeof raw.name === 'string' && raw.name.trim().length > 0
+        ? raw.name
+        : 'Section 1'
+    return ensureQuestionIds({
+      sections: [
+        {
+          name: sectionName,
+          questions: raw.questions,
+        },
+      ],
+    })
+  }
+  // Sometimes content nested under "content"
+  if (raw.content && Array.isArray(raw.content.sections)) {
+    return ensureQuestionIds({ sections: raw.content.sections })
+  }
+  // Unsupported formats (e.g., IELTS passage/question_groups)
+  throw new Error('Invalid test content: expected content.sections[]')
+}
+
 export async function listPublishedTests(): Promise<{ data?: Pick<TestRecord, 'id'|'name'|'description'|'time_limit_minutes'>[]; error?: string }> {
   const { data, error } = await supabase
     .from('tests')
@@ -76,14 +108,16 @@ export async function getTestById(id: string): Promise<{ data?: TestRecord; erro
     if (error || !data) return { error: error?.message || 'Test not found' }
 
     const rawContent = (data as any)?.content
-    if (!rawContent || !Array.isArray(rawContent.sections)) {
-      return { error: 'Invalid test content: expected content.sections[]' }
+    let normalized: TestContent
+    try {
+      normalized = normalizeToTestContent(rawContent)
+    } catch (e: any) {
+      return { error: e?.message || 'Invalid test content' }
     }
 
-    // Ensure IDs in content
     const withIds: TestRecord = {
-      ...data,
-      content: ensureQuestionIds(rawContent as TestContent),
+      ...(data as any),
+      content: normalized,
     } as TestRecord
     return { data: withIds }
   } catch (e: any) {
@@ -101,10 +135,12 @@ export interface UploadTestJSON {
 
 export async function uploadTestFromJSON(json: UploadTestJSON, created_by?: string): Promise<{ id?: string; error?: string }> {
   try {
+    // Accept only the official shape for new uploads; normalize sections + ids
+    const normalizedContent = normalizeToTestContent(json.content)
     const normalized: UploadTestJSON = {
       ...json,
       is_published: json.is_published ?? true,
-      content: ensureQuestionIds(json.content),
+      content: normalizedContent,
     }
     const { data, error } = await supabase
       .from('tests')

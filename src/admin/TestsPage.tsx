@@ -21,6 +21,84 @@ type NewTestForm = {
   contentText: string; // JSON string
 };
 
+// Coerce legacy/flat content into the expected shape { sections: [{ name, questions: [...] }]}
+function coerceContent(input: any): any {
+  if (!input) return input;
+  if (Array.isArray(input.sections)) return input;
+  if (Array.isArray(input.questions)) {
+    return { sections: [{ name: 'Section 1', questions: input.questions }] };
+  }
+  // If content was mistakenly wrapped again, try to unwrap one level
+  if (input.content && Array.isArray(input.content.sections)) {
+    return input.content;
+  }
+  return input;
+}
+
+// A simple sample "content" object (ONLY the content field value expected by the Admin form)
+const SAMPLE_CONTENT_JSON = JSON.stringify(
+  {
+    sections: [
+      {
+        name: 'General Knowledge',
+        questions: [
+          {
+            id: 'gk1',
+            text: 'What is 2 + 2?',
+            choices: [
+              { key: 'A', label: '3' },
+              { key: 'B', label: '4' },
+              { key: 'C', label: '5' },
+            ],
+            correct: 'B',
+            maxScore: 1,
+          },
+          {
+            id: 'gk2',
+            text: 'Which planet is known as the Red Planet?',
+            choices: [
+              { key: 'A', label: 'Mars' },
+              { key: 'B', label: 'Jupiter' },
+              { key: 'C', label: 'Venus' },
+            ],
+            correct: 'A',
+            maxScore: 1,
+          },
+        ],
+      },
+      {
+        name: 'English',
+        questions: [
+          {
+            id: 'en1',
+            text: `Choose the correct word: "Their/There/They're going to school."`,
+            choices: [
+              { key: 'A', label: 'Their' },
+              { key: 'B', label: 'There' },
+              { key: 'C', label: "They're" },
+            ],
+            correct: 'C',
+            maxScore: 1,
+          },
+          {
+            id: 'en2',
+            text: 'Pick the synonym of “happy”.',
+            choices: [
+              { key: 'A', label: 'Sad' },
+              { key: 'B', label: 'Joyful' },
+              { key: 'C', label: 'Angry' },
+            ],
+            correct: 'B',
+            maxScore: 1,
+          },
+        ],
+      },
+    ],
+  },
+  null,
+  2
+);
+
 export default function TestsPage() {
   const [tests, setTests] = useState<TestRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +109,8 @@ export default function TestsPage() {
     description: '',
     time_limit_minutes: '',
     is_published: false,
-    contentText: '{\n  "questions": []\n}',
+    // Updated default to a valid structure the runner expects
+    contentText: '{\n  "sections": [\n    {\n      "name": "Section 1",\n      "questions": []\n    }\n  ]\n}',
   });
 
   const [creating, setCreating] = useState(false);
@@ -65,7 +144,8 @@ export default function TestsPage() {
     let content: unknown = null;
     if (form.contentText.trim()) {
       try {
-        content = JSON.parse(form.contentText);
+        const parsed = JSON.parse(form.contentText);
+        content = coerceContent(parsed);
       } catch (err) {
         setError('Content JSON is invalid.');
         return;
@@ -105,7 +185,7 @@ export default function TestsPage() {
       description: '',
       time_limit_minutes: '',
       is_published: false,
-      contentText: '{\n  "questions": []\n}',
+      contentText: '{\n  "sections": [\n    {\n      "name": "Section 1",\n      "questions": []\n    }\n  ]\n}',
     });
 
     await load();
@@ -133,6 +213,17 @@ export default function TestsPage() {
     }
     await load();
   }
+
+  const useSample = () => {
+    setForm((prev) => ({
+      ...prev,
+      name: prev.name.trim() ? prev.name : 'Sample English Placement',
+      description: prev.description,
+      time_limit_minutes: prev.time_limit_minutes || '5',
+      is_published: true,
+      contentText: SAMPLE_CONTENT_JSON,
+    }));
+  };
 
   return (
     <AdminGate>
@@ -190,10 +281,19 @@ export default function TestsPage() {
                 <textarea
                   value={form.contentText}
                   onChange={(e) => setForm({ ...form, contentText: e.target.value })}
-                  rows={8}
+                  rows={12}
                   style={{ display: 'block', width: '100%', fontFamily: 'monospace', marginTop: 6 }}
                 />
               </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <small style={{ color: '#666' }}>
+                  Tip: Expected shape is {"{ sections: [ { name, questions: [...] } ] }"}. If you only have
+                  a top-level {"{ questions: [...] }"}, it will be wrapped into "Section 1".
+                </small>
+                <button type="button" onClick={useSample}>
+                  Use sample content
+                </button>
+              </div>
 
               <div>
                 <button type="submit" disabled={!canCreate || creating}>
