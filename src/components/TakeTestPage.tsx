@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import {
   getTestById,
@@ -25,10 +26,10 @@ export function TakeTestPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // The inline runner is kept for now, but primary flow is to navigate to /test/:id
   const [activeTestId, setActiveTestId] = useState<string | null>(null)
   const [activeTestName, setActiveTestName] = useState<string>('')
   const [content, setContent] = useState<TestContent | null>(null)
-
   const [answers, setAnswers] = useState<Record<string, AnswerKey | undefined>>({})
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -139,14 +140,12 @@ export function TakeTestPage() {
           )}
         </div>
 
-        {/* Error */}
         {error && (
           <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-red-700 text-sm">
             {error}
           </div>
         )}
 
-        {/* Test list and active panel */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <aside className="lg:col-span-4">
             <div className="space-y-2">
@@ -155,10 +154,10 @@ export function TakeTestPage() {
                 <p className="text-gray-500">No tests available yet.</p>
               )}
               {tests.map((t) => (
-                <button
+                <Link
                   key={t.id}
-                  onClick={() => selectTest(t.id)}
-                  className={`w-full text-left px-4 py-3 rounded-lg border transition
+                  to={`/test/${t.id}`}
+                  className={`block w-full text-left px-4 py-3 rounded-lg border transition
                     ${activeTestId === t.id ? 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1D4ED8]' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
                 >
                   <div className="font-semibold">{t.name}</div>
@@ -166,7 +165,7 @@ export function TakeTestPage() {
                   {t.time_limit_minutes ? (
                     <div className="text-xs text-gray-400 mt-1">{t.time_limit_minutes} min</div>
                   ) : null}
-                </button>
+                </Link>
               ))}
             </div>
 
@@ -205,10 +204,13 @@ export function TakeTestPage() {
             )}
           </aside>
 
+          {/* Keeping the inline panel for now for users who prefer not to navigate away */}
           <section className="lg:col-span-8">
             {!activeTestId && (
               <div className="rounded-lg border border-gray-200 p-6">
-                <p className="text-gray-600">Select a test on the left to begin.</p>
+                <p className="text-gray-600">
+                  Select a test on the left to open it, or click to navigate to a dedicated page.
+                </p>
               </div>
             )}
 
@@ -248,9 +250,7 @@ export function TakeTestPage() {
                         </div>
                       ))}
                     </div>
-                  </div>
                 ))}
-
                 <button
                   type="submit"
                   disabled={submitting || !user?.id}
@@ -268,18 +268,6 @@ export function TakeTestPage() {
                   <p className="text-2xl mt-2">
                     {score} / {totalMax} ({Math.round((score / (totalMax || 1)) * 100)}%)
                   </p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="font-semibold">By Section</h4>
-                  {useMemo(() => {
-                    const by = scoreAnswers(content, answers).sections
-                    return by.map((s) => (
-                      <div key={s.section} className="flex justify-between rounded-md border border-gray-200 p-2">
-                        <span>{s.section}</span>
-                        <span className="font-medium">{s.score} / {s.maxScore}</span>
-                      </div>
-                    ))
-                  }, [content, answers]).map((el) => el)}
                 </div>
                 <div className="flex gap-3">
                   <button onClick={reset} className="border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50">Retake</button>
