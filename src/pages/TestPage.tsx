@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import {
@@ -9,6 +9,19 @@ import {
   type TestContent,
 } from '../lib/tests'
 
+// --- Timer component for test page
+function TestTimer({ secondsLeft }: { secondsLeft: number }) {
+  const min = Math.floor(secondsLeft / 60);
+  const sec = secondsLeft % 60;
+  return (
+    <div className="w-full text-center py-2 bg-blue-50 border-b border-blue-200 mb-4 sticky top-0 z-10">
+      <span className="font-bold text-lg text-blue-700">
+        Time Remaining: {min.toString().padStart(2, '0')}:{sec.toString().padStart(2, '0')}
+      </span>
+    </div>
+  );
+}
+
 export default function TestPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
@@ -17,10 +30,15 @@ export default function TestPage() {
   const [error, setError] = useState<string | null>(null)
   const [testName, setTestName] = useState('')
   const [content, setContent] = useState<TestContent | null>(null)
+  const [timeLimit, setTimeLimit] = useState<number | null>(null)
 
   const [answers, setAnswers] = useState<Record<string, AnswerKey | undefined>>({})
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+
+  // Timer state
+  const [secondsLeft, setSecondsLeft] = useState<number>(0)
+  const timerStartedRef = useRef(false)
 
   useEffect(() => {
     let ignore = false
@@ -35,6 +53,7 @@ export default function TestPage() {
         } else {
           setContent(data.content)
           setTestName(data.name)
+          setTimeLimit(data.time_limit_minutes ?? null)
         }
         setLoading(false)
       }
@@ -42,6 +61,28 @@ export default function TestPage() {
     load()
     return () => { ignore = true }
   }, [id])
+
+  // Start timer when test loads
+  useEffect(() => {
+    if (content && timeLimit && !timerStartedRef.current) {
+      setSecondsLeft(timeLimit * 60)
+      timerStartedRef.current = true
+    }
+  }, [content, timeLimit])
+
+  // Countdown & auto-submit logic
+  useEffect(() => {
+    if (!secondsLeft || submitted) return
+    if (secondsLeft <= 0 && !submitted) {
+      // Time's up, auto-submit
+      handleSubmit(new Event('submit') as any)
+      return
+    }
+    const interval = setInterval(() => {
+      setSecondsLeft(s => (s > 0 ? s - 1 : 0))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [secondsLeft, submitted])
 
   const totalMax = useMemo(() => {
     return content?.sections.reduce(
@@ -77,6 +118,10 @@ export default function TestPage() {
   const reset = () => {
     setAnswers({})
     setSubmitted(false)
+    timerStartedRef.current = false
+    if (timeLimit) {
+      setSecondsLeft(timeLimit * 60)
+    }
   }
 
   return (
@@ -89,6 +134,11 @@ export default function TestPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6">
+        {/* Timer only when test is active */}
+        {secondsLeft > 0 && !submitted && (
+          <TestTimer secondsLeft={secondsLeft} />
+        )}
+
         {loading && <p className="text-gray-600">Loading test...</p>}
 
         {error && (
@@ -105,6 +155,9 @@ export default function TestPage() {
                   <h1 className="text-2xl font-bold">{testName}</h1>
                   {totalMax > 0 && (
                     <p className="text-sm text-gray-500 mt-1">Total points: {totalMax}</p>
+                  )}
+                  {timeLimit && (
+                    <p className="text-sm text-gray-400 mt-1">Time limit: {timeLimit} min</p>
                   )}
                 </div>
 

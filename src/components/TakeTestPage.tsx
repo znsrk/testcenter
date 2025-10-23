@@ -3,17 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { isAdminEmail, listPublishedTests, uploadTestFromJSON, type UploadTestJSON } from '../lib/tests'
 import { useEffect, useState } from 'react';
 
-function TestTimer({ secondsLeft }: { secondsLeft: number }) {
-  const min = Math.floor(secondsLeft / 60);
-  const sec = secondsLeft % 60;
-  return (
-    <div className="w-full text-center py-2 bg-blue-50 border-b border-blue-200 mb-4 sticky top-0 z-10">
-      <span className="font-bold text-lg text-blue-700">
-        Time Remaining: {min.toString().padStart(2, '0')}:{sec.toString().padStart(2, '0')}
-      </span>
-    </div>
-  );
-}
+// Removed TestTimer from here; it's now in TestPage.tsx
 
 interface TestListItem {
   id: string
@@ -31,28 +21,11 @@ export function TakeTestPage() {
 
   const admin = isAdminEmail(user?.email)
 
-  // Track selected test and timer
+  // Track selected test
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null)
   const selectedTest = tests.find(t => t.id === selectedTestId) ?? null
 
-  const [secondsLeft, setSecondsLeft] = useState<number>(0)
-  // Reset timer when selecting a test
-  useEffect(() => {
-    if (selectedTest?.time_limit_minutes) {
-      setSecondsLeft(selectedTest.time_limit_minutes * 60)
-    } else {
-      setSecondsLeft(0)
-    }
-  }, [selectedTestId, selectedTest?.time_limit_minutes])
-
-  // Timer countdown
-  useEffect(() => {
-    if (!selectedTestId || secondsLeft <= 0) return
-    const interval = setInterval(() => {
-      setSecondsLeft(s => (s > 0 ? s - 1 : 0))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [selectedTestId, secondsLeft])
+  // Removed timer logic from here
 
   const handleUpload = async (file?: File | null) => {
     if (!file || !user?.id) return
@@ -91,10 +64,6 @@ export function TakeTestPage() {
   // When user clicks a test card, select and go to test page
   const handleTestClick = (testId: string) => {
     setSelectedTestId(testId)
-    const test = tests.find(t => t.id === testId)
-    if (test && test.time_limit_minutes) {
-      setSecondsLeft(test.time_limit_minutes * 60)
-    }
     setTimeout(() => {
       navigate(`/test/${testId}`)
     }, 150) // slight delay to show selection
@@ -207,9 +176,7 @@ export function TakeTestPage() {
           </aside>
 
           <section className="lg:col-span-8 relative">
-            {selectedTest && selectedTest.time_limit_minutes ? (
-              <TestTimer secondsLeft={secondsLeft} />
-            ) : null}
+            {/* Timer removed from here */}
             <div className="rounded-lg border border-gray-200 p-6 mt-0">
               {selectedTest ? (
                 <div>
