@@ -1,10 +1,8 @@
 import { useState } from 'react'
-import { signUp, signIn } from '../lib/auth'
+import { signUp, login } from '../lib/auth'
 
 interface SignupPageProps {
-  // Optionally: Pass a callback for successful login, e.g. onSignInSuccess
   onSignInSuccess?: () => void
-  // You may want to keep onShowLogin if needed elsewhere
   onShowLogin?: () => void
 }
 
@@ -63,10 +61,7 @@ export function SignupPage({ onSignInSuccess, onShowLogin }: SignupPageProps) {
 
       if (user) {
         // Automatically sign in after successful signup
-        const { user: signedInUser, error: signInError } = await signIn({
-          email,
-          password
-        })
+        const { user: signedInUser, error: signInError } = await login(email, password)
         setLoading(false)
         if (signInError) {
           setError(signInError.message || 'Account created, but failed to sign in')
