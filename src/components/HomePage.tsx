@@ -46,7 +46,7 @@ export function HomePage() {
   return (
     <div className="flex min-h-screen bg-white text-gray-900 flex-col">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur border-b border-gray-200">
+      <header className="fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur border-b border-gray-200 h-14">
         <div className="mx-auto flex h-14 items-center justify-between px-4">
           <h1 className="text-xl font-bold text-[#007BFF]">EnglishProfTest</h1>
           <div className="relative" ref={profileRef}>
@@ -83,11 +83,11 @@ export function HomePage() {
       </header>
 
       {/* Tab navigation always visible on small screens, hidden on desktop */}
-      <nav className="pt-14 bg-white border-b border-gray-200 w-full sticky top-0 z-30 sm:hidden">
-        <div className="flex justify-center gap-2 mx-auto max-w-5xl">
+      <nav className="fixed top-14 left-0 right-0 z-30 bg-white border-b border-gray-200 w-full sm:hidden h-12">
+        <div className="flex justify-center gap-2 mx-auto max-w-5xl h-12">
           <button
             onClick={() => setActiveTab('results')}
-            className={`flex-1 text-center px-4 py-3 rounded-t-lg border-b-2 transition font-semibold ${
+            className={`flex-1 text-center px-4 py-3 rounded-t-lg border-b-2 transition font-semibold h-12 ${
               activeTab === 'results'
                 ? 'border-[#007BFF] bg-[#EFF6FF] text-[#1D4ED8]'
                 : 'border-transparent bg-white text-gray-700 hover:bg-gray-50'
@@ -97,7 +97,7 @@ export function HomePage() {
           </button>
           <button
             onClick={() => setActiveTab('takeTest')}
-            className={`flex-1 text-center px-4 py-3 rounded-t-lg border-b-2 transition font-semibold ${
+            className={`flex-1 text-center px-4 py-3 rounded-t-lg border-b-2 transition font-semibold h-12 ${
               activeTab === 'takeTest'
                 ? 'border-[#007BFF] bg-[#EFF6FF] text-[#1D4ED8]'
                 : 'border-transparent bg-white text-gray-700 hover:bg-gray-50'
@@ -111,7 +111,7 @@ export function HomePage() {
       {/* Main area */}
       <div className="flex w-full flex-1">
         {/* Sidebar only for desktop */}
-        <nav className="hidden sm:block w-64 shrink-0 border-r border-gray-200 bg-white p-4">
+        <nav className="hidden sm:block w-64 shrink-0 border-r border-gray-200 bg-white p-4 sticky top-14 h-[calc(100vh-3.5rem)]">
           <ul className="space-y-2">
             <li>
               <button
@@ -141,7 +141,12 @@ export function HomePage() {
         </nav>
 
         {/* Right content panel */}
-        <main className="flex-1 p-2 sm:p-6 pt-4 sm:pt-6">
+        {/* For mobile, add pt-[104px] (14 header + 12 tab nav = 56px + 48px = 104px) */}
+        {/* For desktop, add pt-14 for header only */}
+        <main className={`flex-1 p-2 sm:p-6 ${
+          // pt-14 for desktop, pt-[104px] for mobile
+          'pt-[104px] sm:pt-14'
+        }`}>
           <div className="mx-auto max-w-5xl">
             {activeTab === 'results' && (
               <ResultsPage embedded />

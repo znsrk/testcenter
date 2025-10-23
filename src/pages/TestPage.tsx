@@ -40,6 +40,9 @@ export default function TestPage() {
   const [secondsLeft, setSecondsLeft] = useState<number>(0)
   const timerStartedRef = useRef(false)
 
+  // NEW: Track auto-submit due to timer
+  const [timedOut, setTimedOut] = useState(false)
+
   useEffect(() => {
     let ignore = false
     const load = async () => {
@@ -75,7 +78,7 @@ export default function TestPage() {
     if (!secondsLeft || submitted) return
     if (secondsLeft <= 0 && !submitted) {
       // Time's up, auto-submit
-      handleSubmit(new Event('submit') as any)
+      autoSubmit()
       return
     }
     const interval = setInterval(() => {
@@ -83,6 +86,22 @@ export default function TestPage() {
     }, 1000)
     return () => clearInterval(interval)
   }, [secondsLeft, submitted])
+
+  // NEW: Auto-submit function for timer end
+  const autoSubmit = async () => {
+    if (!content || !user?.id) return
+    setSubmitting(true)
+    const { error } = await submitAttempt({
+      userId: user.id,
+      testName: testName || 'Test',
+      content,
+      answers
+    })
+    setSubmitting(false)
+    setSubmitted(true)
+    setTimedOut(true)
+    if (error) setError(error)
+  }
 
   const totalMax = useMemo(() => {
     return content?.sections.reduce(
@@ -112,12 +131,14 @@ export default function TestPage() {
     })
     setSubmitting(false)
     setSubmitted(true)
+    setTimedOut(false) // manual submission
     if (error) setError(error)
   }
 
   const reset = () => {
     setAnswers({})
     setSubmitted(false)
+    setTimedOut(false)
     timerStartedRef.current = false
     if (timeLimit) {
       setSecondsLeft(timeLimit * 60)
@@ -218,6 +239,11 @@ export default function TestPage() {
 
             {submitted && (
               <div className="space-y-6">
+                {timedOut && (
+                  <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-yellow-700 text-sm">
+                    Time is up! Your test was automatically submitted.
+                  </div>
+                )}
                 <div className="rounded-lg border border-gray-200 p-4">
                   <h3 className="text-lg font-semibold">Your Score</h3>
                   <p className="text-2xl mt-2">

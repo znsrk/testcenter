@@ -11,10 +11,11 @@ type ResultRow = {
   test_date: string // date
   created_at: string // timestamptz
   sections?: { section: string; score: number; maxScore: number }[] | null
+  users?: { first_name: string } | null // added for joined user
 }
 
 function toCSV(rows: ResultRow[]) {
-  const headers = ['id','user_id','test_name','score','total_questions','passed','test_date','created_at']
+  const headers = ['id','user_id','first_name','test_name','score','total_questions','passed','test_date','created_at']
   const esc = (v: unknown) => {
     if (v === null || v === undefined) return ''
     const s = String(v)
@@ -23,7 +24,10 @@ function toCSV(rows: ResultRow[]) {
   }
   const lines = [
     headers.join(','),
-    ...rows.map(r => headers.map(h => esc((r as any)[h])).join(',')),
+    ...rows.map(r => headers.map(h => {
+      if (h === 'first_name') return esc(r.users?.first_name)
+      return esc((r as any)[h])
+    }).join(','))
   ]
   return lines.join('\n')
 }
@@ -41,7 +45,12 @@ export default function AdminResults() {
     setError(null)
     const { data, error } = await supabase
       .from('test_results')
-      .select('*')
+      .select(`
+        *,
+        users: user_id (
+          first_name
+        )
+      `)
       .order('created_at', { ascending: false })
       .limit(1000)
     if (error) {
@@ -62,6 +71,7 @@ export default function AdminResults() {
     return rows.filter(r =>
       r.test_name?.toLowerCase().includes(needle) ||
       r.user_id?.toLowerCase().includes(needle) ||
+      r.users?.first_name?.toLowerCase().includes(needle) || // allow searching by first name
       r.test_date?.toLowerCase().includes(needle)
     )
   }, [rows, q])
@@ -85,7 +95,7 @@ export default function AdminResults() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by test, user ID, date"
+            placeholder="Search by test, user name, user ID, date"
             style={{ padding: 6, width: 260 }}
           />
           <button type="button" onClick={load} disabled={loading}>
@@ -120,7 +130,9 @@ export default function AdminResults() {
                 <tr key={r.id}>
                   <td style={{ borderBottom: '1px solid #f3f4f6', padding: 8 }}>{r.test_name}</td>
                   <td style={{ borderBottom: '1px solid #f3f4f6', padding: 8 }}>
-                    <code style={{ fontSize: 12 }}>{r.user_id}</code>
+                    <code style={{ fontSize: 12 }}>
+                      {r.users?.first_name ? r.users.first_name : r.user_id}
+                    </code>
                   </td>
                   <td style={{ borderBottom: '1px solid #f3f4f6', padding: 8 }}>
                     {r.score} / {r.total_questions}
