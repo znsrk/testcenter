@@ -23,9 +23,16 @@ export function RegistrationPage({ onNavigate }: RegistrationPageProps) {
     { value: 'sat', label: 'SAT' }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // FIX: Registration should ONLY create a user, not any test results.
+  // If you use a registration API, call it here and make sure it does not create any test_results.
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.fullName && formData.city && formData.testType && agreedToTerms) {
+      // Example: Call your real registration API here (should only create user, not test results)
+      // await registerUser({ ...formData });
+
+      // After successful registration, navigate to success/login page
       onNavigate('success');
     }
   };

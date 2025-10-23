@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { signUp } from '../lib/auth'
-import { generateRandomTestResults } from '../lib/generateTestResults'
-
 interface SignupPageProps {
   onShowLogin: () => void
 }
@@ -57,7 +55,6 @@ export function SignupPage({ onShowLogin }: SignupPageProps) {
         setError(authError.message)
         setLoading(false)
       } else if (user) {
-        await generateRandomTestResults(user.id)
         onShowLogin()
       }
     } catch (err: any) {
@@ -85,7 +82,7 @@ export function SignupPage({ onShowLogin }: SignupPageProps) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Аты (First Name)
+                  First Name
                 </label>
                 <input
                   id="firstName"
@@ -95,13 +92,13 @@ export function SignupPage({ onShowLogin }: SignupPageProps) {
                   onChange={(e) => setFirstName(e.target.value)}
                   disabled={loading}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                  placeholder="Жансерік"
+                  placeholder="Zhanserik"
                 />
               </div>
 
               <div>
                 <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                  Тегі (Last Name)
+                  Last Name
                 </label>
                 <input
                   id="lastName"
@@ -111,7 +108,7 @@ export function SignupPage({ onShowLogin }: SignupPageProps) {
                   onChange={(e) => setLastName(e.target.value)}
                   disabled={loading}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                  placeholder="Жарылғасын"
+                  placeholder="Zharylgassyn"
                 />
               </div>
             </div>

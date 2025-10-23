@@ -202,10 +202,7 @@ export default function TestPage() {
                         className="text-sm text-gray-600 mb-3"
                         style={{
                           maxWidth: '100%',
-                          maxHeight: 120,
-                          overflow: 'auto',
-                          wordBreak: 'break-word',
-                          whiteSpace: 'pre-line',
+                          // REMOVE maxHeight, overflow, wordBreak, whiteSpace
                         }}
                         title={sec.description}
                       >
