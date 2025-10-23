@@ -82,12 +82,12 @@ export function HomePage() {
         </div>
       </header>
 
-      {/* Tab navigation always visible, responsive layout */}
-      <nav className="pt-14 bg-white border-b border-gray-200 w-full sticky top-0 z-30">
-        <div className="flex justify-center gap-2 sm:gap-0 sm:justify-start mx-auto max-w-5xl">
+      {/* Tab navigation always visible on small screens, hidden on desktop */}
+      <nav className="pt-14 bg-white border-b border-gray-200 w-full sticky top-0 z-30 sm:hidden">
+        <div className="flex justify-center gap-2 mx-auto max-w-5xl">
           <button
             onClick={() => setActiveTab('results')}
-            className={`flex-1 text-center px-4 py-3 sm:w-48 rounded-t-lg border-b-2 transition font-semibold ${
+            className={`flex-1 text-center px-4 py-3 rounded-t-lg border-b-2 transition font-semibold ${
               activeTab === 'results'
                 ? 'border-[#007BFF] bg-[#EFF6FF] text-[#1D4ED8]'
                 : 'border-transparent bg-white text-gray-700 hover:bg-gray-50'
@@ -97,7 +97,7 @@ export function HomePage() {
           </button>
           <button
             onClick={() => setActiveTab('takeTest')}
-            className={`flex-1 text-center px-4 py-3 sm:w-48 rounded-t-lg border-b-2 transition font-semibold ${
+            className={`flex-1 text-center px-4 py-3 rounded-t-lg border-b-2 transition font-semibold ${
               activeTab === 'takeTest'
                 ? 'border-[#007BFF] bg-[#EFF6FF] text-[#1D4ED8]'
                 : 'border-transparent bg-white text-gray-700 hover:bg-gray-50'
