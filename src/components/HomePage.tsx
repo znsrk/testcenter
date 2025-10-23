@@ -44,7 +44,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white text-gray-900">
+    <div className="flex min-h-screen bg-white text-gray-900 flex-col">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur border-b border-gray-200">
         <div className="mx-auto flex h-14 items-center justify-between px-4">
@@ -82,9 +82,35 @@ export function HomePage() {
         </div>
       </header>
 
+      {/* Tab navigation always visible, responsive layout */}
+      <nav className="pt-14 bg-white border-b border-gray-200 w-full sticky top-0 z-30">
+        <div className="flex justify-center gap-2 sm:gap-0 sm:justify-start mx-auto max-w-5xl">
+          <button
+            onClick={() => setActiveTab('results')}
+            className={`flex-1 text-center px-4 py-3 sm:w-48 rounded-t-lg border-b-2 transition font-semibold ${
+              activeTab === 'results'
+                ? 'border-[#007BFF] bg-[#EFF6FF] text-[#1D4ED8]'
+                : 'border-transparent bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Results
+          </button>
+          <button
+            onClick={() => setActiveTab('takeTest')}
+            className={`flex-1 text-center px-4 py-3 sm:w-48 rounded-t-lg border-b-2 transition font-semibold ${
+              activeTab === 'takeTest'
+                ? 'border-[#007BFF] bg-[#EFF6FF] text-[#1D4ED8]'
+                : 'border-transparent bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Take Test
+          </button>
+        </div>
+      </nav>
+
       {/* Main area */}
-      <div className="flex w-full pt-14">
-        {/* Left sidebar buttons */}
+      <div className="flex w-full flex-1">
+        {/* Sidebar only for desktop */}
         <nav className="hidden sm:block w-64 shrink-0 border-r border-gray-200 bg-white p-4">
           <ul className="space-y-2">
             <li>
@@ -114,28 +140,8 @@ export function HomePage() {
           </ul>
         </nav>
 
-        {/* Mobile navbar */}
-        <nav className="sm:hidden w-full fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 flex justify-around">
-          <button
-            onClick={() => setActiveTab('results')}
-            className={`flex-1 py-3 text-center border-r border-gray-200 ${
-              activeTab === 'results' ? 'bg-[#EFF6FF] text-[#1D4ED8]' : 'bg-white text-gray-700'
-            }`}
-          >
-            Results
-          </button>
-          <button
-            onClick={() => setActiveTab('takeTest')}
-            className={`flex-1 py-3 text-center ${
-              activeTab === 'takeTest' ? 'bg-[#EFF6FF] text-[#1D4ED8]' : 'bg-white text-gray-700'
-            }`}
-          >
-            Take Test
-          </button>
-        </nav>
-
         {/* Right content panel */}
-        <main className="flex-1 p-2 sm:p-6 pt-4 sm:pt-6 mb-14 sm:mb-0">
+        <main className="flex-1 p-2 sm:p-6 pt-4 sm:pt-6">
           <div className="mx-auto max-w-5xl">
             {activeTab === 'results' && (
               <ResultsPage embedded />
