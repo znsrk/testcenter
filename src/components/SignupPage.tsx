@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { signUp, login } from '../lib/auth'
+import { useAuth } from '../contexts/AuthContext'
 
 interface SignupPageProps {
   onSignInSuccess?: () => void
@@ -14,6 +15,9 @@ export function SignupPage({ onSignInSuccess, onShowLogin }: SignupPageProps) {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  // FIX: Get login method from AuthContext
+  const { login: setAuthUser } = useAuth()
 
   const validateForm = () => {
     if (!firstName.trim()) {
@@ -66,11 +70,13 @@ export function SignupPage({ onSignInSuccess, onShowLogin }: SignupPageProps) {
         if (signInError) {
           setError(signInError.message || 'Account created, but failed to sign in')
         } else if (signedInUser) {
-          // Successful sign in
+          // FIX: Set user in AuthContext so app updates!
+          setAuthUser(signedInUser)
+          // Optionally, call onSignInSuccess or navigate
           if (onSignInSuccess) {
             onSignInSuccess()
           }
-          // Optionally, redirect or reload page here
+          // App will now show HomePage due to AuthContext change
         }
       }
     } catch (err: any) {
