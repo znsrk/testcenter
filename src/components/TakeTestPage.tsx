@@ -71,8 +71,8 @@ export function TakeTestPage() {
 
   return (
     <div className="bg-white">
-      <div className="max-w-5xl">
-        <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="max-w-5xl mx-auto px-2 sm:px-0">
+        <div className="mb-6 flex flex-col sm:flex-row items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold">Take a Test</h2>
             <p className="text-gray-500">Choose a published test from the list and complete it.</p>
@@ -106,7 +106,7 @@ export function TakeTestPage() {
               {tests.map((t) => (
                 <div
                   key={t.id}
-                  className={`block w-full text-left px-4 py-3 rounded-lg border transition bg-white border-gray-200 hover:bg-blue-50 ${selectedTestId === t.id ? 'border-blue-400 bg-blue-100' : ''}`}
+                  className={`block w-full text-left px-2 sm:px-4 py-3 rounded-lg border transition bg-white border-gray-200 hover:bg-blue-50 ${selectedTestId === t.id ? 'border-blue-400 bg-blue-100' : ''}`}
                   style={{ position: 'relative', cursor: 'pointer' }}
                   onClick={() => handleTestClick(t.id)}
                   tabIndex={0}
@@ -121,7 +121,6 @@ export function TakeTestPage() {
                       className="text-sm text-gray-500 mb-2"
                       style={{
                         maxWidth: '100%',
-                        // Remove maxHeight and overflow so it always expands fully
                         wordBreak: 'break-word',
                         whiteSpace: 'pre-line',
                       }}
@@ -177,7 +176,7 @@ export function TakeTestPage() {
 
           <section className="lg:col-span-8 relative">
             {/* Timer removed from here */}
-            <div className="rounded-lg border border-gray-200 p-6 mt-0">
+            <div className="rounded-lg border border-gray-200 p-2 sm:p-6 mt-0">
               {selectedTest ? (
                 <div>
                   <h3 className="text-xl font-bold">{selectedTest.name}</h3>
@@ -186,7 +185,6 @@ export function TakeTestPage() {
                       className="text-sm text-gray-500 mb-2"
                       style={{
                         maxWidth: '100%',
-                        // Remove maxHeight and overflow so it always expands fully
                         wordBreak: 'break-word',
                         whiteSpace: 'pre-line',
                       }}

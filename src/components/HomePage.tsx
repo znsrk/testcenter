@@ -85,7 +85,7 @@ export function HomePage() {
       {/* Main area */}
       <div className="flex w-full pt-14">
         {/* Left sidebar buttons */}
-        <nav className="w-64 shrink-0 border-r border-gray-200 bg-white p-4">
+        <nav className="hidden sm:block w-64 shrink-0 border-r border-gray-200 bg-white p-4">
           <ul className="space-y-2">
             <li>
               <button
@@ -114,8 +114,28 @@ export function HomePage() {
           </ul>
         </nav>
 
+        {/* Mobile navbar */}
+        <nav className="sm:hidden w-full fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 flex justify-around">
+          <button
+            onClick={() => setActiveTab('results')}
+            className={`flex-1 py-3 text-center border-r border-gray-200 ${
+              activeTab === 'results' ? 'bg-[#EFF6FF] text-[#1D4ED8]' : 'bg-white text-gray-700'
+            }`}
+          >
+            Results
+          </button>
+          <button
+            onClick={() => setActiveTab('takeTest')}
+            className={`flex-1 py-3 text-center ${
+              activeTab === 'takeTest' ? 'bg-[#EFF6FF] text-[#1D4ED8]' : 'bg-white text-gray-700'
+            }`}
+          >
+            Take Test
+          </button>
+        </nav>
+
         {/* Right content panel */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-2 sm:p-6 pt-4 sm:pt-6 mb-14 sm:mb-0">
           <div className="mx-auto max-w-5xl">
             {activeTab === 'results' && (
               <ResultsPage embedded />
