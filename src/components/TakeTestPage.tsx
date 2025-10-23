@@ -197,7 +197,7 @@ export function TakeTestPage() {
                 </div>
               ) : (
                 <p className="text-gray-600">
-                  Click a test on the left to preview and begin.
+                  Click a test on the screen to preview and begin.
                 </p>
               )}
             </div>

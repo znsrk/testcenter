@@ -9,17 +9,17 @@ import {
   type TestContent,
 } from '../lib/tests'
 
-// --- Timer component for test page
+// Timer component
 function TestTimer({ secondsLeft }: { secondsLeft: number }) {
-  const min = Math.floor(secondsLeft / 60);
-  const sec = secondsLeft % 60;
+  const min = Math.floor(secondsLeft / 60)
+  const sec = secondsLeft % 60
   return (
     <div className="w-full text-center py-2 bg-blue-50 border-b border-blue-200 mb-4 sticky top-0 z-10">
       <span className="font-bold text-lg text-blue-700">
         Time Remaining: {min.toString().padStart(2, '0')}:{sec.toString().padStart(2, '0')}
       </span>
     </div>
-  );
+  )
 }
 
 export default function TestPage() {
@@ -35,14 +35,14 @@ export default function TestPage() {
   const [answers, setAnswers] = useState<Record<string, AnswerKey | undefined>>({})
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [timedOut, setTimedOut] = useState(false)
 
   // Timer state
   const [secondsLeft, setSecondsLeft] = useState<number>(0)
-  const timerStartedRef = useRef(false)
+  const [timerActive, setTimerActive] = useState(false)
+  const autoSubmitDone = useRef(false)
 
-  // NEW: Track auto-submit due to timer
-  const [timedOut, setTimedOut] = useState(false)
-
+  // Load the test
   useEffect(() => {
     let ignore = false
     const load = async () => {
@@ -67,31 +67,40 @@ export default function TestPage() {
 
   // Start timer when test loads
   useEffect(() => {
-    if (content && timeLimit && !timerStartedRef.current) {
+    if (content && timeLimit && !timerActive) {
       setSecondsLeft(timeLimit * 60)
-      timerStartedRef.current = true
+      setTimerActive(true)
     }
-  }, [content, timeLimit])
+  }, [content, timeLimit, timerActive])
 
-  // Countdown & auto-submit logic
+  // Timer countdown & auto-submit
   useEffect(() => {
-    if (!secondsLeft || submitted) return
-    if (secondsLeft <= 0 && !submitted) {
-      // Time's up, auto-submit
+    if (!timerActive || submitted) return
+
+    if (secondsLeft === 0 && !autoSubmitDone.current) {
+      autoSubmitDone.current = true
       autoSubmit()
       return
     }
-    const interval = setInterval(() => {
-      setSecondsLeft(s => (s > 0 ? s - 1 : 0))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [secondsLeft, submitted])
 
-  // NEW: Auto-submit function for timer end
+    if (secondsLeft > 0) {
+      const interval = setInterval(() => {
+        setSecondsLeft(s => s - 1)
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [secondsLeft, submitted, timerActive])
+
   const autoSubmit = async () => {
-    if (!content || !user?.id) return
+    setTimedOut(true)
     setSubmitting(true)
-    const { error } = await submitAttempt({
+    if (!content || !user?.id) {
+      setError("Couldn't submit: user not logged in or test not loaded.")
+      setSubmitted(true)
+      setSubmitting(false)
+      return
+    }
+    await submitAttempt({
       userId: user.id,
       testName: testName || 'Test',
       content,
@@ -99,8 +108,41 @@ export default function TestPage() {
     })
     setSubmitting(false)
     setSubmitted(true)
-    setTimedOut(true)
-    if (error) setError(error)
+  }
+
+  const handleSelect = (qid: string, key: AnswerKey) => {
+    setAnswers(prev => ({ ...prev, [qid]: key }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    if (!content || !user?.id) return
+    await submitAttempt({
+      userId: user.id,
+      testName: testName || 'Test',
+      content,
+      answers
+    })
+    setSubmitting(false)
+    setSubmitted(true)
+    setTimedOut(false)
+    setTimerActive(false)
+  }
+
+  const reset = () => {
+    setAnswers({})
+    setSubmitted(false)
+    setTimedOut(false)
+    setError(null)
+    autoSubmitDone.current = false
+    if (timeLimit) {
+      setSecondsLeft(timeLimit * 60)
+      setTimerActive(true)
+    } else {
+      setSecondsLeft(0)
+      setTimerActive(false)
+    }
   }
 
   const totalMax = useMemo(() => {
@@ -115,36 +157,6 @@ export default function TestPage() {
     return scoreAnswers(content, answers).totalScore
   }, [submitted, content, answers])
 
-  const handleSelect = (qid: string, key: AnswerKey) => {
-    setAnswers(prev => ({ ...prev, [qid]: key }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!content || !user?.id) return
-    setSubmitting(true)
-    const { error } = await submitAttempt({
-      userId: user.id,
-      testName: testName || 'Test',
-      content,
-      answers
-    })
-    setSubmitting(false)
-    setSubmitted(true)
-    setTimedOut(false) // manual submission
-    if (error) setError(error)
-  }
-
-  const reset = () => {
-    setAnswers({})
-    setSubmitted(false)
-    setTimedOut(false)
-    timerStartedRef.current = false
-    if (timeLimit) {
-      setSecondsLeft(timeLimit * 60)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-white">
       <header className="border-b border-gray-200">
@@ -155,8 +167,7 @@ export default function TestPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6">
-        {/* Timer only when test is active */}
-        {secondsLeft > 0 && !submitted && (
+        {(timerActive && secondsLeft > 0 && !submitted) && (
           <TestTimer secondsLeft={secondsLeft} />
         )}
 
