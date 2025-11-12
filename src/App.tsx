@@ -4,7 +4,9 @@ import { useAuth } from './contexts/AuthContext'
 import { HomePage } from './components/HomePage'
 import { LoginPage } from './components/LoginPage'
 import { SignupPage } from './components/SignupPage'
-import { GradeCalculator } from './components/calc'  // Assuming this component exists
+import { GradeCalculator } from './components/calc'
+import TestsPage from './admin/TestsPage'
+import TestPage from './pages/TestPage'
 
 function AppContent() {
   const [showSignup, setShowSignup] = useState(false)
@@ -25,6 +27,8 @@ function AppContent() {
           )
         } />
         <Route path="/calc" element={<GradeCalculator />} />
+        <Route path="/admin" element={<TestsPage />} />
+        <Route path="/test/:id" element={<TestPage />} />
       </Routes>
     </div>
   )
