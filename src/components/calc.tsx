@@ -364,14 +364,6 @@ const statusText: React.CSSProperties = {
   fontWeight: 500, // not bold
   color: '#0F172A',
 }
-
-const statusSub: React.CSSProperties = {
-  marginTop: 6,
-  fontSize: 13,
-  color: '#334155',
-  fontVariantNumeric: 'tabular-nums',
-}
-
 const targetsWrap: React.CSSProperties = {
   marginTop: 14,
   display: 'grid',
