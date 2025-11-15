@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react'
 
 // Weights and thresholds
 const W = { mid: 0.3, end: 0.3, fin: 0.4 } as const
-const THRESH = { mid: 25, end: 50, fin: 50 } as const
+const THRESH = { mid: 25, end: 25, fin: 50 } as const
 type Term = keyof typeof W
 
 export function GradeCalculator() {
