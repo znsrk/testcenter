@@ -102,6 +102,7 @@ const MODEL_NAME = 'gemini-2.0-flash';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
 const STORAGE_KEY = 'english_test_state';
 const ESSAY_STORAGE_KEY = 'essay_draft_state';
+const ESSAY_TOPIC_KEY = 'essay_selected_topic';
 
 // ============== ESSAY TOPICS ==============
 const ESSAY_TOPICS: EssayTopic[] = [
@@ -200,6 +201,24 @@ function loadEssayDraft(): { topicId: number; text: string } | null {
 
 function clearEssayDraft(): void {
   localStorage.removeItem(ESSAY_STORAGE_KEY);
+}
+
+function saveSelectedEssayTopic(topic: EssayTopic): void {
+  localStorage.setItem(ESSAY_TOPIC_KEY, JSON.stringify(topic));
+}
+
+function loadSelectedEssayTopic(): EssayTopic | null {
+  const saved = localStorage.getItem(ESSAY_TOPIC_KEY);
+  if (!saved) return null;
+  try {
+    return JSON.parse(saved) as EssayTopic;
+  } catch {
+    return null;
+  }
+}
+
+function clearSelectedEssayTopic(): void {
+  localStorage.removeItem(ESSAY_TOPIC_KEY);
 }
 
 // ============== API SERVICE ==============
@@ -361,7 +380,7 @@ Evaluate this essay and return ONLY valid JSON (no markdown, no code blocks) wit
 IMPORTANT RULES:
 - Be strict and thorough in finding ALL mistakes
 - totalScore must equal the sum of all four category scores
-- List EVERY grammar, spelling, and punctuation mistake found
+- List EVERY grammar, spelling, and punctuation mistake
 - Provide actionable, specific advice
 - Focus ONLY on errors and improvements, not praise
 - If the essay contains no mistakes, elevate the score by a few points accordingly, if the user uses good vocabulary, also elevate points accordingly and remark that.
@@ -712,6 +731,7 @@ class EssayRenderer {
 
   private render(): void {
     const savedDraft = loadEssayDraft();
+    const savedTopic = loadSelectedEssayTopic();
     
     this.container.innerHTML = `
       <div class="test-wrapper essay-wrapper">
@@ -760,15 +780,12 @@ class EssayRenderer {
 
     this.attachEventListeners();
     
-    // Restore saved draft topic
-    if (savedDraft) {
-      const topic = ESSAY_TOPICS.find(t => t.id === savedDraft.topicId);
-      if (topic) {
-        this.currentTopic = topic;
-        (this.container.querySelector('#topic-select') as HTMLSelectElement).value = String(topic.id);
-        this.displayTopic(topic);
-        this.updateWordCount();
-      }
+    // Restore saved topic and draft
+    if (savedTopic) {
+      this.currentTopic = savedTopic;
+      (this.container.querySelector('#topic-select') as HTMLSelectElement).value = String(savedTopic.id);
+      this.displayTopic(savedTopic);
+      this.updateWordCount();
     }
   }
 
@@ -791,6 +808,7 @@ class EssayRenderer {
         try {
           const topic = await generateEssayTopic();
           this.currentTopic = topic;
+          saveSelectedEssayTopic(topic);
           this.displayTopic(topic);
         } catch (error) {
           alert('Failed to generate topic. Please try again.');
@@ -802,6 +820,7 @@ class EssayRenderer {
         const topic = ESSAY_TOPICS.find(t => t.id === parseInt(value));
         if (topic) {
           this.currentTopic = topic;
+          saveSelectedEssayTopic(topic);
           this.displayTopic(topic);
         }
       }
@@ -1542,6 +1561,7 @@ export function initTestPage(host: HTMLElement): void {
   }
 
   const saved = loadState();
+  const savedEssayTopic = loadSelectedEssayTopic();
 
   host.innerHTML = `
     <div class="test-page">
@@ -1567,15 +1587,11 @@ export function initTestPage(host: HTMLElement): void {
   const taskTypeSelect = document.getElementById('task-type') as HTMLSelectElement;
   const testArea = document.getElementById('test-area') as HTMLElement;
 
-  // Restore saved test if exists
+  // Restore saved test or essay if exists
   if (saved) {
     new TestRenderer(saved.task, testArea, saved.answers);
     taskTypeSelect.value = saved.task.type;
-  }
-
-  // Check for saved essay draft
-  const savedEssay = loadEssayDraft();
-  if (savedEssay && !saved) {
+  } else if (savedEssayTopic) {
     taskTypeSelect.value = 'essay';
     new EssayRenderer(testArea);
   }
@@ -1601,6 +1617,7 @@ export function initTestPage(host: HTMLElement): void {
 
     try {
       const task = await generateTask(taskType as 'reading' | 'use-of-english');
+      clearSelectedEssayTopic();
       saveState(task, {});
       new TestRenderer(task, testArea);
     } catch (error) {
