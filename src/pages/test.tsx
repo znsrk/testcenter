@@ -238,11 +238,12 @@ async function generateTask(taskType: 'reading' | 'use-of-english'): Promise<Tas
 }
 TOPIC RANDOMNESS RULES:
 - Randomly choose a unique main topic for the Section 1 passage from a broad range of domains including but not limited to: history, cutting-edge science, technology ethics, environmental policy, sociology, arts & culture, global economics, anthropology, future studies, space exploration, marine biology, ancient civilizations, modern inventions, social movements, culinary traditions, wildlife conservation, digital innovation, or philosophical debates. Ensure each generation selects a completely different topic from previous ones, varying narrative angle, setting, and subject focus to maximize diversity and avoid repetition.
-- The chosen topic should not be in the text itself, the text also should not have any formatting symbols like * or {} or &&.
+- The chosen topic should not be in the text at all, the text also should not have any formatting symbols like * or {} or &&.
+- The generated reading text should have factual information and avoid fictional elements.
 SECTION 2 VARIETY RULES:
 - Each of the 3 short texts must tackle completely different and randomly selected domains from a wide, family-friendly range including but not limited to: adventure travel, scientific breakthroughs, cultural festivals, entrepreneurial journeys, personal growth stories, historical explorations, technological advancements, environmental initiatives, artistic creations, culinary adventures, wildlife encounters, space discoveries, social innovations, educational experiences, or community projects. Explicitly mention the domain within each short text to emphasize contrast and uniqueness. Ensure no overlap or similarity in themes, subjects, or narratives between texts or across generations—make each text entirely distinct and unpredictable.
 - Vary the narrative style, perspective, and focus for each short text to further enhance randomness.
-
+- The texts in section two should be formatted in a way to look like strips of text taken from a huge story or something else, it should not be a short strip that has a definive start or an ending.
 REQUIREMENTS:
 - Section 1 Part 1: 6 TRUE/FALSE/NOT GIVEN questions (ids 1-6)
 - Section 1 Part 2: 5 multiple choice questions (ids 7-11)
