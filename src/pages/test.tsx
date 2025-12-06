@@ -364,7 +364,9 @@ IMPORTANT RULES:
 - List EVERY grammar, spelling, and punctuation mistake found
 - Provide actionable, specific advice
 - Focus ONLY on errors and improvements, not praise
-- If the essay contains no mistakes, elevate the score by a few points accordingly.
+- If the essay contains no mistakes, elevate the score by a few points accordingly, if the user uses good vocabulary, also elevate points accordingly and remark that.
+- Do not remark non-mistake issues as mistakes, like using a different type of a word that is correct in the sentence.
+- Count oxford commas as incorrect form of language, remark as a mistake and show the correction.
 - If essay is too short or too long, reflect this in the content score`;
 
   const response = await fetch(API_URL, {
@@ -410,7 +412,7 @@ The task should be appropriate for an English olympiad and require 150-160 words
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.9 }
+      generationConfig: { temperature: 0.8 }
     })
   });
 
