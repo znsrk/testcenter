@@ -6,3 +6,4 @@ export type Page =
   | 'results'
   | 'login'
   | 'signup'
+  | 'test'
