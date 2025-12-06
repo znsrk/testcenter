@@ -364,6 +364,7 @@ IMPORTANT RULES:
 - List EVERY grammar, spelling, and punctuation mistake found
 - Provide actionable, specific advice
 - Focus ONLY on errors and improvements, not praise
+- If the essay contains no mistakes, elevate the score by a few points accordingly.
 - If essay is too short or too long, reflect this in the content score`;
 
   const response = await fetch(API_URL, {
@@ -892,9 +893,9 @@ class EssayRenderer {
 
     // Color code word count
     const wordCountEl = this.container.querySelector('.word-count') as HTMLElement;
-    if (words > 200 || (words >= 150 && words <= 160)) {
+    if (words >= 150 && words <= 170) {
       wordCountEl.style.color = 'var(--success)';
-    } else if (words >= 140 && words <= 170) {
+    } else if (words >= 140 && words <= 150) {
       wordCountEl.style.color = 'var(--warning)';
     } else {
       wordCountEl.style.color = 'var(--danger)';
