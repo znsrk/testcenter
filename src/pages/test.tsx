@@ -237,13 +237,12 @@ async function generateTask(taskType: 'reading' | 'use-of-english'): Promise<Tas
   }
 }
 TOPIC RANDOMNESS RULES:
-- Randomly choose a unique main topic for the Section 1 passage from: history, cutting-edge science, technology ethics, environmental policy, sociology, arts & culture, global economics, anthropology, or future studies.
-- Vary narrative angle, setting, and subject focus each time; avoid repeating topics or reusing sample phrasing.
-- Clearly weave the selected topic into the passage with specific details.
+- Randomly choose a unique main topic for the Section 1 passage from a broad range of domains including but not limited to: history, cutting-edge science, technology ethics, environmental policy, sociology, arts & culture, global economics, anthropology, future studies, space exploration, marine biology, ancient civilizations, modern inventions, social movements, culinary traditions, wildlife conservation, digital innovation, or philosophical debates. Ensure each generation selects a completely different topic from previous ones, varying narrative angle, setting, and subject focus to maximize diversity and avoid repetition.
+- Clearly weave the selected topic into the passage with specific, unique details that highlight its distinctiveness.
 
 SECTION 2 VARIETY RULES:
-- Each of the 3 short texts must tackle completely different domains (e.g., travel anecdote, scientific innovation, cultural festival, entrepreneurship insight, personal narrative, etc.).
-- Mention the domain within each short text to highlight contrast.
+- Each of the 3 short texts must tackle completely different and randomly selected domains from a wide, family-friendly range including but not limited to: adventure travel, scientific breakthroughs, cultural festivals, entrepreneurial journeys, personal growth stories, historical explorations, technological advancements, environmental initiatives, artistic creations, culinary adventures, wildlife encounters, space discoveries, social innovations, educational experiences, or community projects. Explicitly mention the domain within each short text to emphasize contrast and uniqueness. Ensure no overlap or similarity in themes, subjects, or narratives between texts or across generations—make each text entirely distinct and unpredictable.
+- Vary the narrative style, perspective, and focus for each short text to further enhance randomness.
 
 REQUIREMENTS:
 - Section 1 Part 1: 6 TRUE/FALSE/NOT GIVEN questions (ids 1-6)
