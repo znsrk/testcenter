@@ -26,7 +26,6 @@ interface TextInputQuestion {
   acceptableAnswers?: string[];
 }
 
-type Question = TrueFalseQuestion | MultipleChoiceQuestion | TextInputQuestion;
 
 interface ShortText {
   id: number;
