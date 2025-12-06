@@ -238,8 +238,7 @@ async function generateTask(taskType: 'reading' | 'use-of-english'): Promise<Tas
 }
 TOPIC RANDOMNESS RULES:
 - Randomly choose a unique main topic for the Section 1 passage from a broad range of domains including but not limited to: history, cutting-edge science, technology ethics, environmental policy, sociology, arts & culture, global economics, anthropology, future studies, space exploration, marine biology, ancient civilizations, modern inventions, social movements, culinary traditions, wildlife conservation, digital innovation, or philosophical debates. Ensure each generation selects a completely different topic from previous ones, varying narrative angle, setting, and subject focus to maximize diversity and avoid repetition.
-- Clearly weave the selected topic into the passage with specific, unique details that highlight its distinctiveness.
-
+- The chosen topic should not be in the text itself, the text also should not have any formatting symbols like * or {} or &&.
 SECTION 2 VARIETY RULES:
 - Each of the 3 short texts must tackle completely different and randomly selected domains from a wide, family-friendly range including but not limited to: adventure travel, scientific breakthroughs, cultural festivals, entrepreneurial journeys, personal growth stories, historical explorations, technological advancements, environmental initiatives, artistic creations, culinary adventures, wildlife encounters, space discoveries, social innovations, educational experiences, or community projects. Explicitly mention the domain within each short text to emphasize contrast and uniqueness. Ensure no overlap or similarity in themes, subjects, or narratives between texts or across generations—make each text entirely distinct and unpredictable.
 - Vary the narrative style, perspective, and focus for each short text to further enhance randomness.
