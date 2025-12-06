@@ -236,6 +236,15 @@ async function generateTask(taskType: 'reading' | 'use-of-english'): Promise<Tas
     ]
   }
 }
+TOPIC RANDOMNESS RULES:
+- Randomly choose a unique main topic for the Section 1 passage from: history, cutting-edge science, technology ethics, environmental policy, sociology, arts & culture, global economics, anthropology, or future studies.
+- Vary narrative angle, setting, and subject focus each time; avoid repeating topics or reusing sample phrasing.
+- Clearly weave the selected topic into the passage with specific details.
+
+SECTION 2 VARIETY RULES:
+- Each of the 3 short texts must tackle completely different domains (e.g., travel anecdote, scientific innovation, cultural festival, entrepreneurship insight, personal narrative, etc.).
+- Mention the domain within each short text to highlight contrast.
+
 REQUIREMENTS:
 - Section 1 Part 1: 6 TRUE/FALSE/NOT GIVEN questions (ids 1-6)
 - Section 1 Part 2: 5 multiple choice questions (ids 7-11)
