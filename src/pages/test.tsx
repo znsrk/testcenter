@@ -97,7 +97,7 @@ interface EssayEvaluation {
 type Task = ReadingTask | UseOfEnglishTask;
 
 // ============== CONFIG ==============
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_API_KEY = import.meta.env.GEMINIS_API_KEY;
 const MODEL_NAME = 'gemini-2.0-flash';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
 const STORAGE_KEY = 'english_test_state';
