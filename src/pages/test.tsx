@@ -1,4 +1,3 @@
-
 // test.tsx - Complete Olympiad-Style English Test Generator with Essay Evaluation
 
 import { useEffect, useRef } from 'react';
@@ -521,9 +520,9 @@ class TestRenderer {
                </div>
                
                <div class="time-picker-scroll">
-                  <div class="time-pill" data-time="60">1 Min</div>
-                  <div class="time-pill selected" data-time="120">2 Min</div>
                   <div class="time-pill" data-time="180">3 Min</div>
+                  <div class="time-pill selected" data-time="300">5 Min</div>
+                  <div class="time-pill" data-time="420">7 Min</div>
                </div>
 
                <div class="timer-controls-apple">
@@ -609,6 +608,13 @@ class TestRenderer {
       this.pauseTimer(toggleBtn);
       this.remainingTime = this.totalTimeSeconds;
       timerContainer.classList.remove('times-up');
+      
+      // Re-enable the toggle button in case it was finished
+      toggleBtn.disabled = false;
+      toggleBtn.textContent = 'Start';
+      toggleBtn.classList.remove('paused');
+      toggleBtn.classList.add('play');
+      
       this.updateTimerVisuals(circumference, progressRing, minDisplay, secDisplay);
     });
 
@@ -654,7 +660,6 @@ class TestRenderer {
     container.classList.add('times-up');
     const toggleBtn = this.container.querySelector('#btn-toggle-timer') as HTMLButtonElement;
     toggleBtn.textContent = 'Finished';
-    toggleBtn.disabled = true;
 
     // Haptic feedback if supported
     if (navigator.vibrate) {
