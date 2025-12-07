@@ -1,3 +1,4 @@
+
 // test.tsx - Complete Olympiad-Style English Test Generator with Essay Evaluation
 
 import { useEffect, useRef } from 'react';
@@ -25,7 +26,6 @@ interface TextInputQuestion {
   correctAnswer: string;
   acceptableAnswers?: string[];
 }
-
 
 interface ShortText {
   id: number;
@@ -65,10 +65,17 @@ interface UseOfEnglishTask {
   };
 }
 
+interface SpeakingTask {
+  type: 'speaking';
+  title: string;
+  topic: string;
+  questions: string[];
+}
+
 // Essay Types
 interface EssayTopic {
   id: number;
-  type: 'article' | 'report' | 'letter' | 'review' | 'essay';
+  type: 'article' | 'report' | 'letter' | 'review' | 'essay' | 'custom';
   title: string;
   prompt: string;
 }
@@ -94,7 +101,7 @@ interface EssayEvaluation {
   structureAdvice: string[];
 }
 
-type Task = ReadingTask | UseOfEnglishTask;
+type Task = ReadingTask | UseOfEnglishTask | SpeakingTask;
 
 // ============== CONFIG ==============
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -222,7 +229,7 @@ function clearSelectedEssayTopic(): void {
 }
 
 // ============== API SERVICE ==============
-async function generateTask(taskType: 'reading' | 'use-of-english'): Promise<Task> {
+async function generateTask(taskType: 'reading' | 'use-of-english' | 'speaking'): Promise<Task> {
   const readingPrompt = `Generate a B2-C1 level English reading test in olympiad style. Return ONLY valid JSON (no markdown) with this EXACT structure:
 {
   "type": "reading",
@@ -256,19 +263,13 @@ async function generateTask(taskType: 'reading' | 'use-of-english'): Promise<Tas
   }
 }
 TOPIC RANDOMNESS RULES:
-- Randomly choose a unique main topic for the Section 1 passage from a broad range of domains including but not limited to: history, cutting-edge science, technology ethics, environmental policy, sociology, arts & culture, global economics, anthropology, future studies, space exploration, marine biology, ancient civilizations, modern inventions, social movements, culinary traditions, wildlife conservation, digital innovation, or philosophical debates. Ensure each generation selects a completely different topic from previous ones, varying narrative angle, setting, and subject focus to maximize diversity and avoid repetition.
-- The chosen topic name should not appear in the text at all, the text also should not have any formatting symbols like * or {} or &&.
+- Randomly choose a unique main topic for the Section 1 passage.
 - The generated reading text should have factual information and avoid fictional elements.
-SECTION 2 VARIETY RULES:
-- Each of the 3 short texts must tackle completely different and randomly selected domains from a wide, family-friendly range including but not limited to: adventure travel, scientific breakthroughs, cultural festivals, entrepreneurial journeys, personal growth stories, historical explorations, technological advancements, environmental initiatives, artistic creations, culinary adventures, wildlife encounters, space discoveries, social innovations, educational experiences, or community projects. Explicitly mention the domain within each short text to emphasize contrast and uniqueness. Ensure no overlap or similarity in themes, subjects, or narratives between texts or across generations—make each text entirely distinct and unpredictable.
-- Vary the narrative style, perspective, and focus for each short text to further enhance randomness.
-- The texts in section two should be formatted in a way to look like strips of text taken from a huge story or something else, it should not have a definive start or an ending, just a small story or similar.
 REQUIREMENTS:
 - Section 1 Part 1: 6 TRUE/FALSE/NOT GIVEN questions (ids 1-6)
 - Section 1 Part 2: 5 multiple choice questions (ids 7-11)
 - Section 2: 3 different short unrelated texts, each with 4 multiple choice questions (ids 12-23)
-- Total: 23 questions
-- correctAnswer for multiple-choice is index 0-3`;
+- Total: 23 questions`;
 
   const useOfEnglishPrompt = `Generate a B2-C1 level Use of English test in olympiad style. Return ONLY valid JSON (no markdown) with this EXACT structure:
 {
@@ -300,14 +301,35 @@ REQUIREMENTS:
 - Task 3: 5 one-word-fits-all questions (ids 16-20)
 - Total: 20 questions`;
 
-  const prompt = taskType === 'reading' ? readingPrompt : useOfEnglishPrompt;
+  // UPDATED SPEAKING PROMPT
+  const speakingPrompt = `Generate a diverse B2-C1 level English Speaking Task. Return ONLY valid JSON (no markdown) with this EXACT structure:
+  {
+    "type": "speaking",
+    "title": "Speaking Task",
+    "topic": "The Main Title of the Topic\\n\\nA short paragraph (30-40 words) that provides context, sets the scene, or offers a thought-provoking statement about the topic to help the student start speaking.",
+    "questions": [
+      "Short Question 1",
+      "Short Question 2"
+    ]
+  }
+  
+  CRITICAL REQUIREMENTS:
+  1. TOPIC SELECTION: Randomly select a category from this list: [Education Dilemmas, The Future of Work, Ethics in Science, Cultural Globalization, Urban vs Rural Life, Mental Health, Artificial Intelligence, Traditional Values, Mass Media, Consumerism].
+  2. TOPIC CONTENT: The 'topic' field must contain the Title followed by a meaningful elaboration/context paragraph.
+  3. QUESTIONS: Generate 5 questions. They must be SHORT, PUNCHY, and COMPACT (max 10-15 words each). Avoid long, winding questions.
+  `;
+
+  let prompt = '';
+  if (taskType === 'reading') prompt = readingPrompt;
+  else if (taskType === 'use-of-english') prompt = useOfEnglishPrompt;
+  else prompt = speakingPrompt;
 
   const response = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.8 }
+      generationConfig: { temperature: 1.0 } // Increased to 1.0 for maximum variety in Speaking
     })
   });
 
@@ -345,48 +367,35 @@ Evaluate this essay and return ONLY valid JSON (no markdown, no code blocks) wit
   "categories": {
     "content": {
       "score": <number 0-10>,
-      "feedback": "<specific feedback about how well the content addresses the task>"
+      "feedback": "<specific feedback>"
     },
     "communicativeAchievement": {
       "score": <number 0-10>,
-      "feedback": "<feedback about tone, register, and format appropriateness>"
+      "feedback": "<feedback about tone, register>"
     },
     "organisation": {
       "score": <number 0-10>,
-      "feedback": "<feedback about structure, paragraphing, and coherence>"
+      "feedback": "<feedback about structure>"
     },
     "language": {
       "score": <number 0-10>,
-      "feedback": "<feedback about grammar range and vocabulary>"
+      "feedback": "<feedback about grammar/vocab>"
     }
   },
   "grammarMistakes": [
-    {"original": "<exact wrong phrase>", "correction": "rrected version>", "explanation": "<brief grammar rule explanation>"}
+    {"original": "<wrong>", "correction": "<right>", "explanation": "<why>"}
   ],
-  "spellingMistakes": [
-    {"original": "<misspelled word>", "correction": "rrect spelling>", "explanation": "<brief note>"}
-  ],
-  "punctuationMistakes": [
-    {"original": "<punctuation error>", "correction": "rrect punctuation>", "explanation": "<brief rule>"}
-  ],
-  "vocabularyAdvice": [
-    "<specific suggestion for better word choice or phrase>"
-  ],
-  "structureAdvice": [
-    "<specific suggestion for improving essay structure>"
-  ]
+  "spellingMistakes": [],
+  "punctuationMistakes": [],
+  "vocabularyAdvice": ["<advice>"],
+  "structureAdvice": ["<advice>"]
 }
 
 IMPORTANT RULES:
-- Be strict and thorough in finding ALL mistakes
-- totalScore must equal the sum of all four category scores
-- List EVERY grammar, spelling, and punctuation mistake
-- Provide actionable, specific advice
-- Focus ONLY on errors and improvements, not praise
-- If the essay contains no mistakes, elevate the score by a few points accordingly, if the user uses good vocabulary, also elevate points accordingly and remark that.
-- Do not remark non-mistake issues as mistakes, like using a different type of a word that is correct in the sentence.
-- Count oxford commas as incorrect form of language, remark as a mistake and show the correction.
-- If essay is too short or too long, reflect this in the content score`;
+- Be strict.
+- If the essay contains no mistakes, elevate the score.
+- Count oxford commas as incorrect.
+- If essay is too short/long, reflect in content score.`;
 
   const response = await fetch(API_URL, {
     method: 'POST',
@@ -397,16 +406,11 @@ IMPORTANT RULES:
     })
   });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(`API error ${response.status}: ${JSON.stringify(errorData)}`);
-  }
+  if (!response.ok) throw new Error('Evaluation failed');
 
   const data = await response.json();
   const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!responseText) throw new Error('Empty response from API');
-
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+  const jsonMatch = responseText?.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Invalid JSON response');
 
   return JSON.parse(jsonMatch[0]) as EssayEvaluation;
@@ -421,9 +425,8 @@ async function generateEssayTopic(): Promise<EssayTopic> {
   "id": 99,
   "type": "${randomType}",
   "title": "<short descriptive title>",
-  "prompt": "<detailed writing prompt of 2-3 sentences explaining exactly what to write about>"
+  "prompt": "<detailed writing prompt of 2-3 sentences>"
 }
-
 The task should be appropriate for an English olympiad and require 150-160 words.`;
 
   const response = await fetch(API_URL, {
@@ -451,6 +454,12 @@ class TestRenderer {
   private container: HTMLElement;
   private answers: Record<string, string | number> = {};
   private submitted: boolean = false;
+  
+  // Timer specific properties
+  private timerInterval: any = null;
+  private totalTimeSeconds: number = 60; // default
+  private remainingTime: number = 60;
+  private isTimerRunning: boolean = false;
 
   constructor(task: Task, container: HTMLElement, savedAnswers?: Record<string, string | number>) {
     this.task = task;
@@ -462,17 +471,209 @@ class TestRenderer {
   private render(): void {
     if (this.task.type === 'reading') {
       this.renderReadingTask(this.task);
-    } else {
+      this.attachEventListeners();
+    } else if (this.task.type === 'use-of-english') {
       this.renderUseOfEnglishTask(this.task);
+      this.attachEventListeners();
+    } else {
+      this.renderSpeakingTask(this.task);
+      // Speaking listeners are attached inside renderSpeakingTask for cleaner logic separation
     }
-    this.attachEventListeners();
-    this.restoreAnswers();
+    
+    if (this.task.type !== 'speaking') {
+      this.restoreAnswers();
+    }
   }
 
   private escapeHtml(text: string): string {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  private renderSpeakingTask(task: SpeakingTask): void {
+    // UPDATED: Smaller Circle math
+    const radius = 60; // Reduced from 80
+    const circumference = 2 * Math.PI * radius;
+
+    this.container.innerHTML = `
+      <div class="test-wrapper">
+        <div class="test-header">
+          <h2>${this.escapeHtml(task.title)}</h2>
+          <span class="test-badge">Speaking • B2-C1 Level</span>
+        </div>
+        
+        <div class="speaking-layout">
+          <!-- Left Column: Sticky Timer -->
+          <div class="timer-column">
+             <div class="apple-timer-container">
+               <div class="timer-ring-wrapper">
+                 <svg class="timer-svg" width="130" height="130" viewBox="0 0 130 130">
+                   <circle class="timer-bg-ring" cx="65" cy="65" r="${radius}" fill="none" stroke-width="6"></circle>
+                   <circle class="timer-progress-ring" cx="65" cy="65" r="${radius}" fill="none" stroke-width="6"
+                           stroke-dasharray="${circumference}" stroke-dashoffset="0" transform="rotate(-90 65 65)"></circle>
+                 </svg>
+                 <div class="timer-text-overlay">
+                    <span id="timer-minutes">01</span>
+                    <span class="timer-colon">:</span>
+                    <span id="timer-seconds">00</span>
+                 </div>
+               </div>
+               
+               <div class="time-picker-scroll">
+                  <div class="time-pill" data-time="60">1 Min</div>
+                  <div class="time-pill selected" data-time="120">2 Min</div>
+                  <div class="time-pill" data-time="180">3 Min</div>
+               </div>
+
+               <div class="timer-controls-apple">
+                  <button id="btn-toggle-timer" class="control-btn play">Start</button>
+                  <button id="btn-reset-timer" class="control-btn reset">Reset</button>
+               </div>
+             </div>
+          </div>
+
+          <!-- Right Column: Content -->
+          <div class="content-column">
+            <div class="speaking-topic-card">
+              <h3>💬 Topic Card</h3>
+              <div class="topic-content">${this.escapeHtml(task.topic).replace(/\n/g, '<br>')}</div>
+            </div>
+            
+            <div class="task-block">
+              <h4>Discussion Questions</h4>
+              <ul class="speaking-questions">
+                ${task.questions.map((q, index) => `
+                  <li class="speaking-question-item">
+                    <span class="q-num">${index + 1}</span>
+                    <span class="q-text">${this.escapeHtml(q)}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+            
+            <button class="btn-new-test" id="finish-speaking" style="width: 100%; margin-top: 16px;">Generate New Topic</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // --- Timer Logic ---
+    const progressRing = this.container.querySelector('.timer-progress-ring') as SVGCircleElement;
+    const minDisplay = this.container.querySelector('#timer-minutes') as HTMLElement;
+    const secDisplay = this.container.querySelector('#timer-seconds') as HTMLElement;
+    const toggleBtn = this.container.querySelector('#btn-toggle-timer') as HTMLButtonElement;
+    const resetBtn = this.container.querySelector('#btn-reset-timer') as HTMLButtonElement;
+    const timePills = this.container.querySelectorAll('.time-pill');
+    const timerContainer = this.container.querySelector('.apple-timer-container') as HTMLElement;
+
+    // Set initial state
+    this.totalTimeSeconds = 120; // Default 2 min
+    this.remainingTime = 120;
+    this.updateTimerVisuals(circumference, progressRing, minDisplay, secDisplay);
+
+    // Time Selection
+    timePills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        if (this.isTimerRunning) return; // Prevent changing time while running
+        
+        timePills.forEach(p => p.classList.remove('selected'));
+        pill.classList.add('selected');
+        
+        const seconds = parseInt(pill.getAttribute('data-time') || '120');
+        this.totalTimeSeconds = seconds;
+        this.remainingTime = seconds;
+        
+        // Remove times-up class if exists
+        timerContainer.classList.remove('times-up');
+        
+        this.updateTimerVisuals(circumference, progressRing, minDisplay, secDisplay);
+      });
+    });
+
+    // Toggle Start/Pause
+    toggleBtn.addEventListener('click', () => {
+      if (this.remainingTime <= 0) return; // Don't start if finished
+
+      if (this.isTimerRunning) {
+        // Pause
+        this.pauseTimer(toggleBtn);
+      } else {
+        // Start
+        this.startTimer(circumference, progressRing, minDisplay, secDisplay, toggleBtn, timerContainer);
+      }
+    });
+
+    // Reset
+    resetBtn.addEventListener('click', () => {
+      this.pauseTimer(toggleBtn);
+      this.remainingTime = this.totalTimeSeconds;
+      timerContainer.classList.remove('times-up');
+      this.updateTimerVisuals(circumference, progressRing, minDisplay, secDisplay);
+    });
+
+    // Reload Page logic
+    this.container.querySelector('#finish-speaking')?.addEventListener('click', () => {
+      clearState();
+      if (this.timerInterval) clearInterval(this.timerInterval);
+      window.location.reload();
+    });
+  }
+
+  private startTimer(circumference: number, ring: SVGCircleElement, minEl: HTMLElement, secEl: HTMLElement, btn: HTMLButtonElement, container: HTMLElement) {
+    this.isTimerRunning = true;
+    btn.textContent = 'Pause';
+    btn.classList.add('paused');
+    btn.classList.remove('play');
+
+    this.timerInterval = setInterval(() => {
+      this.remainingTime--;
+      
+      if (this.remainingTime <= 0) {
+        this.remainingTime = 0;
+        this.pauseTimer(btn);
+        this.handleTimerFinished(container);
+      }
+      
+      this.updateTimerVisuals(circumference, ring, minEl, secEl);
+    }, 1000);
+  }
+
+  private pauseTimer(btn: HTMLButtonElement) {
+    this.isTimerRunning = false;
+    btn.textContent = 'Resume';
+    btn.classList.remove('paused');
+    btn.classList.add('play');
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  private handleTimerFinished(container: HTMLElement) {
+    container.classList.add('times-up');
+    const toggleBtn = this.container.querySelector('#btn-toggle-timer') as HTMLButtonElement;
+    toggleBtn.textContent = 'Finished';
+    toggleBtn.disabled = true;
+
+    // Haptic feedback if supported
+    if (navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]);
+    }
+  }
+
+  private updateTimerVisuals(circumference: number, ring: SVGCircleElement, minEl: HTMLElement, secEl: HTMLElement) {
+    const mins = Math.floor(this.remainingTime / 60);
+    const secs = this.remainingTime % 60;
+
+    minEl.textContent = mins.toString().padStart(2, '0');
+    secEl.textContent = secs.toString().padStart(2, '0');
+
+    // Calculate offset
+    // Offset 0 = Full circle. Offset circumference = Empty circle.
+    // We want it to empty clockwise.
+    const offset = circumference - (this.remainingTime / this.totalTimeSeconds) * circumference;
+    ring.style.strokeDashoffset = offset.toString();
   }
 
   private renderReadingTask(task: ReadingTask): void {
@@ -607,6 +808,8 @@ class TestRenderer {
   }
 
   private attachEventListeners(): void {
+    if (this.task.type === 'speaking') return;
+
     this.container.querySelectorAll('input[type="radio"]').forEach(input => {
       input.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
@@ -746,9 +949,25 @@ class EssayRenderer {
             <select id="topic-select" class="topic-dropdown">
               <option value="">-- Select a topic --</option>
               <option value="generate">🎲 Generate Random Topic</option>
+              <option value="custom">✏️ Type in a topic myself...</option>
               ${ESSAY_TOPICS.map(t => `<option value="${t.id}">[${t.type.toUpperCase()}] ${t.title}</option>`).join('')}
             </select>
           </div>
+
+          <!-- Custom Topic Input Section -->
+          <div id="custom-topic-container" class="custom-topic-container hidden">
+            <h4>Create Your Own Topic</h4>
+            <div class="custom-input-group">
+              <label>Title:</label>
+              <input type="text" id="custom-title" class="text-answer" placeholder="e.g., The Impact of Social Media">
+            </div>
+            <div class="custom-input-group">
+              <label>Prompt / Instructions:</label>
+              <textarea id="custom-prompt" class="essay-textarea" style="min-height: 100px;" placeholder="e.g., Write an essay discussing the pros and cons..."></textarea>
+            </div>
+            <button id="confirm-custom-topic" class="btn-generate" style="margin-top: 12px; width: 100%;">Start Writing</button>
+          </div>
+
           <div id="topic-display" class="topic-display hidden">
             <div class="topic-type-badge"></div>
             <h4 class="topic-title"></h4>
@@ -783,14 +1002,24 @@ class EssayRenderer {
     // Restore saved topic and draft
     if (savedTopic) {
       this.currentTopic = savedTopic;
-      (this.container.querySelector('#topic-select') as HTMLSelectElement).value = String(savedTopic.id);
-      this.displayTopic(savedTopic);
+      const select = this.container.querySelector('#topic-select') as HTMLSelectElement;
+      if (savedTopic.type === 'custom') {
+        select.value = 'custom';
+        // We don't show the inputs again if a custom topic is already active/saved
+        this.displayTopic(savedTopic);
+      } else {
+        const option = Array.from(select.options).find(o => o.value === String(savedTopic.id));
+        if (option) select.value = String(savedTopic.id);
+        this.displayTopic(savedTopic);
+      }
       this.updateWordCount();
     }
   }
 
   private attachEventListeners(): void {
     const topicSelect = this.container.querySelector('#topic-select') as HTMLSelectElement;
+    const customContainer = this.container.querySelector('#custom-topic-container') as HTMLElement;
+    const confirmCustomBtn = this.container.querySelector('#confirm-custom-topic') as HTMLButtonElement;
     const textarea = this.container.querySelector('#essay-textarea') as HTMLTextAreaElement;
     const rateBtn = this.container.querySelector('.btn-rate-essay') as HTMLButtonElement;
     const clearBtn = this.container.querySelector('.btn-clear-essay') as HTMLButtonElement;
@@ -798,8 +1027,15 @@ class EssayRenderer {
 
     topicSelect.addEventListener('change', async () => {
       const value = topicSelect.value;
-      if (!value) {
-        this.hideTopic();
+      
+      // Hide everything first
+      this.hideTopic();
+      customContainer.classList.add('hidden');
+
+      if (!value) return;
+
+      if (value === 'custom') {
+        customContainer.classList.remove('hidden');
         return;
       }
 
@@ -824,6 +1060,31 @@ class EssayRenderer {
           this.displayTopic(topic);
         }
       }
+    });
+
+    confirmCustomBtn.addEventListener('click', () => {
+      const titleInput = this.container.querySelector('#custom-title') as HTMLInputElement;
+      const promptInput = this.container.querySelector('#custom-prompt') as HTMLTextAreaElement;
+      
+      const title = titleInput.value.trim();
+      const prompt = promptInput.value.trim();
+
+      if (!title || !prompt) {
+        alert('Please fill in both the title and the prompt.');
+        return;
+      }
+
+      const customTopic: EssayTopic = {
+        id: -1, // Special ID for custom
+        type: 'custom',
+        title: title,
+        prompt: prompt
+      };
+
+      this.currentTopic = customTopic;
+      saveSelectedEssayTopic(customTopic);
+      customContainer.classList.add('hidden');
+      this.displayTopic(customTopic);
     });
 
     textarea.addEventListener('input', () => {
@@ -946,7 +1207,7 @@ class EssayRenderer {
   }
 
   private getHelpAdvice(type: EssayTopic['type']): string[] {
-    const tips: Record<EssayTopic['type'], string[]> = {
+    const tips: Record<string, string[]> = {
       article: [
         'Hook readers with a short intro that states the angle of your story.',
         'Use two or three body paragraphs, each focusing on a clear subtopic with engaging detail.',
@@ -971,9 +1232,14 @@ class EssayRenderer {
         'Write an introduction that paraphrases the question and states your position.',
         'Use two main body paragraphs, each with a topic sentence, explanation, and example.',
         'Conclude by summarizing your stance and reinforcing the most convincing argument.'
+      ],
+      custom: [
+        'Identify the text type required by your prompt (e.g., formal essay, casual article).',
+        'Structure your writing with a clear Introduction, Body, and Conclusion.',
+        'Ensure you answer all parts of the specific prompt you created.'
       ]
     };
-    return tips[type] ?? ['Plan an introduction, organised body paragraphs, and a concise conclusion tailored to the task.'];
+    return tips[type] ?? tips['essay'];
   }
 
   private displayEvaluation(evaluation: EssayEvaluation): void {
@@ -1364,6 +1630,155 @@ const STYLES = `
 
   input[type="radio"] { width: 18px; height: 18px; cursor: pointer; }
 
+  /* --- SPEAKING LAYOUT & NEW TIMER --- */
+  .speaking-layout {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+  }
+  
+  /* Sidebar for Timer */
+  .timer-column {
+    flex: 0 0 220px; /* Fixed width sidebar */
+    position: sticky;
+    top: 20px;
+  }
+  
+  .content-column {
+    flex: 1;
+    min-width: 0; /* Prevents overflow in flex items */
+  }
+  
+  /* Compact Apple-style Timer */
+  .apple-timer-container {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid var(--border);
+    transition: transform 0.2s, background-color 0.3s;
+  }
+  .apple-timer-container.times-up {
+    background: #fef2f2;
+    border-color: var(--danger);
+  }
+  
+  .timer-ring-wrapper {
+    position: relative;
+    width: 130px;
+    height: 130px;
+    margin-bottom: 16px;
+  }
+  .timer-svg { transform: rotate(0deg); }
+  .timer-bg-ring { stroke: #f1f5f9; }
+  .timer-progress-ring {
+    stroke: var(--primary);
+    transition: stroke-dashoffset 1s linear;
+    stroke-linecap: round;
+  }
+  .times-up .timer-progress-ring { stroke: var(--danger); }
+  
+  .timer-text-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+  .timer-text-overlay #timer-minutes,
+  .timer-text-overlay #timer-seconds {
+    display: inline-block;
+    min-width: 1.2em;
+    text-align: center;
+  }
+  .timer-colon { 
+    position: relative; 
+    top: -2px;
+    padding: 0 0.1em;
+  }
+  .times-up .timer-text-overlay { color: var(--danger); font-weight: 600; }
+  
+  /* Time Picker Scroll */
+  .time-picker-scroll {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    gap: 6px;
+    padding-bottom: 0;
+    margin-bottom: 16px;
+  }
+  .time-pill {
+    padding: 4px 10px;
+    background: #f1f5f9;
+    color: var(--text-muted);
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .time-pill:hover { background: #e2e8f0; }
+  .time-pill.selected {
+    background: var(--text);
+    color: white;
+    transform: scale(1.05);
+  }
+  
+  .timer-controls-apple {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+  .control-btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-size: 14px;
+  }
+  .control-btn.play { background: var(--success); color: white; }
+  .control-btn.play:hover { background: #059669; }
+  .control-btn.paused { background: var(--warning); color: white; }
+  .control-btn.paused:hover { background: #d97706; }
+  .control-btn.reset { background: #f1f5f9; color: var(--text-muted); }
+  .control-btn.reset:hover { background: #e2e8f0; color: var(--text); }
+  .control-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .speaking-topic-card {
+    padding: 24px;
+    background: linear-gradient(135deg, var(--primary), #8b5cf6);
+    color: white;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  }
+  .speaking-topic-card h3 { color: white; margin: 0 0 12px 0; font-size: 1.25rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
+  .topic-content { font-size: 1.15rem; line-height: 1.6; font-weight: 500; }
+  
+  .speaking-questions { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .speaking-question-item {
+    display: flex; gap: 16px; padding: 16px; background: white;
+    border: 1px solid var(--border); border-radius: 8px; align-items: center;
+  }
+  .q-num {
+    background: #f1f5f9; color: var(--text-muted); width: 28px; height: 28px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: bold; flex-shrink: 0;
+  }
+  .q-text { color: var(--text); font-size: 1rem; line-height: 1.4; font-weight: 500; }
+
   /* Essay Styles */
   .topic-dropdown {
     width: 100%;
@@ -1374,6 +1789,18 @@ const STYLES = `
     background: white;
     cursor: pointer;
   }
+
+  .custom-topic-container {
+    margin-top: 20px;
+    padding: 24px;
+    background: #fff;
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+  }
+  .custom-topic-container.hidden { display: none; }
+  .custom-topic-container h4 { margin: 0 0 16px 0; color: var(--primary); }
+  .custom-input-group { margin-bottom: 16px; }
+  .custom-input-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 14px; color: var(--text); }
 
   .topic-display {
     margin-top: 20px;
@@ -1537,6 +1964,12 @@ const STYLES = `
   }
   .advice-list li { color: var(--text); line-height: 1.6; }
 
+  @media (max-width: 800px) {
+    .speaking-layout { flex-direction: column; }
+    .timer-column { width: 100%; position: static; margin-bottom: 20px; }
+    .apple-timer-container { width: 100%; max-width: 400px; margin: 0 auto; box-sizing: border-box; }
+  }
+
   @media (max-width: 640px) {
     .test-page { padding: 20px 12px; }
     .test-page h1 { font-size: 1.75rem; }
@@ -1573,6 +2006,7 @@ export function initTestPage(host: HTMLElement): void {
           <select id="task-type">
             <option value="reading">📖 Reading Comprehension</option>
             <option value="use-of-english">🔤 Use of English</option>
+            <option value="speaking">💬 Speaking Practice</option>
             <option value="essay">✍️ Essay Writing</option>
           </select>
           <button class="btn-generate" id="generate-btn">Start</button>
@@ -1616,7 +2050,7 @@ export function initTestPage(host: HTMLElement): void {
     `;
 
     try {
-      const task = await generateTask(taskType as 'reading' | 'use-of-english');
+      const task = await generateTask(taskType as 'reading' | 'use-of-english' | 'speaking');
       clearSelectedEssayTopic();
       saveState(task, {});
       new TestRenderer(task, testArea);
@@ -1644,4 +2078,3 @@ export default function GeneratedTestPage() {
 
   return <div ref={hostRef} />;
 }
-
