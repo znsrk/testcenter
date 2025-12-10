@@ -1,8 +1,6 @@
-// test.tsx - Complete Olympiad-Style English Test Generator with Essay Evaluation
+// test.tsx - Complete Olympiad-Style English Test Generator (Reading, Use of English, Speaking, Listening, Writing)
 
-import { useEffect, useRef, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { useEffect, useRef } from 'react';
 
 // ============== TYPES ==============
 interface TrueFalseQuestion {
@@ -66,6 +64,22 @@ interface UseOfEnglishTask {
   };
 }
 
+interface ListeningTask {
+  type: 'listening';
+  title: string;
+  topic: string;
+  audioScript: Array<{ speaker: 'A' | 'B'; text: string }>;
+  audioUrl: string; // Add this new property
+  section1: {
+    instructions: string;
+    questions: TrueFalseQuestion[];
+  };
+  section2: {
+    instructions: string;
+    questions: MultipleChoiceQuestion[];
+  };
+}
+
 interface SpeakingTask {
   type: 'speaking';
   title: string;
@@ -102,52 +116,16 @@ interface EssayEvaluation {
   structureAdvice: string[];
 }
 
-interface SavedTestState {
-    task: Task;
-    answers: Record<string, string | number>;
-    remainingTime: number; // in seconds
-    practiceTest: PracticeTest | null;
-    timestamp: number;
-}
-
-interface TestResult {
-  id?: number;
-  user_id: string;
-  test_name: string;
-  score: number;
-  total_questions: number;
-  passed: boolean;
-  test_date: string;
-  sections: SectionResult[];
-}
-
-interface SectionResult {
-  section: string;
-  score: number;
-  maxScore: number;
-}
-
-interface PracticeTest {
-  id: number;
-  name: string;
-  description: string;
-  time_limit_minutes: number;
-  content: Task | EssayTopic;
-  who_completed: string[];
-  created_at: string;
-  is_published: boolean;
-}
-
-type Task = ReadingTask | UseOfEnglishTask | SpeakingTask;
+type Task = ReadingTask | UseOfEnglishTask | SpeakingTask | ListeningTask;
 
 // ============== CONFIG ==============
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const MODEL_NAME = 'gemini-2.0-flash';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+const BACKEND_AUDIO_API_URL = 'http://localhost:3001/api/generate-listening-audio'; // New: URL for your Node.js backend
 const STORAGE_KEY = 'english_test_state';
 const ESSAY_STORAGE_KEY = 'essay_draft_state';
 const ESSAY_TOPIC_KEY = 'essay_selected_topic';
-const ACTIVE_VIEW_KEY = 'english_test_active_view';
 
 // ============== ESSAY TOPICS ==============
 const ESSAY_TOPICS: EssayTopic[] = [
@@ -202,20 +180,40 @@ const ESSAY_TOPICS: EssayTopic[] = [
 ];
 
 // ============== LOCAL STORAGE ==============
-function saveState(state: Omit<SavedTestState, 'timestamp'>): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, timestamp: Date.now() }));
+interface TestState {
+  task: Task;
+  answers: Record<string, string | number>;
+  timestamp: number;
+  // Removed listeningPlaybackState as we will use standard audio element
+  // listeningPlaybackState?: {
+  //   currentUtteranceIndex: number;
+  //   currentAudioCharPosition: number;
+  //   elapsedTime: number;
+  // };
 }
 
-function loadState(): SavedTestState | null {
+function saveState(task: Task, answers: Record<string, string | number>): void {
+  // Removed listeningPlaybackState parameter
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ task, answers, timestamp: Date.now() }));
+}
+
+function loadState(): TestState | null {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (!saved) return null;
   try {
     const data = JSON.parse(saved);
-    if (Date.now() - data.timestamp > 24 * 60 * 60 * 1000) {
+    if (Date.now() - data.timestamp > 24 * 60 * 60 * 1000) { // 24 hours
       localStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    return data as SavedTestState;
+    // Ensure task type is correctly loaded for older saved states without audioUrl for listening
+    if (data.task && data.task.type === 'listening' && !data.task.audioUrl) {
+      console.warn("Loaded old listening task state without audioUrl. Re-generating audio URL might be needed on load, or simply invalidate old states.");
+      // For simplicity, we'll clear it to force a regeneration if audioUrl is missing
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return data;
   } catch {
     return null;
   }
@@ -225,7 +223,6 @@ function clearState(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-// ============== LOCAL STORAGE (Essay Draft only) ==============
 function saveEssayDraft(topicId: number, text: string): void {
   localStorage.setItem(ESSAY_STORAGE_KEY, JSON.stringify({ topicId, text, timestamp: Date.now() }));
 }
@@ -250,20 +247,14 @@ function clearEssayDraft(): void {
 }
 
 function saveSelectedEssayTopic(topic: EssayTopic): void {
-  localStorage.setItem(ESSAY_TOPIC_KEY, JSON.stringify({ ...topic, timestamp: Date.now() }));
+  localStorage.setItem(ESSAY_TOPIC_KEY, JSON.stringify(topic));
 }
 
 function loadSelectedEssayTopic(): EssayTopic | null {
   const saved = localStorage.getItem(ESSAY_TOPIC_KEY);
   if (!saved) return null;
   try {
-    const data = JSON.parse(saved);
-    // Check if topic is expired (24 hours)
-    if (data.timestamp && Date.now() - data.timestamp > 24 * 60 * 60 * 1000) {
-      localStorage.removeItem(ESSAY_TOPIC_KEY);
-      return null;
-    }
-    return data as EssayTopic;
+    return JSON.parse(saved) as EssayTopic;
   } catch {
     return null;
   }
@@ -273,24 +264,8 @@ function clearSelectedEssayTopic(): void {
   localStorage.removeItem(ESSAY_TOPIC_KEY);
 }
 
-function saveActiveView(view: 'menu' | 'test' | 'essay'): void {
-  localStorage.setItem(ACTIVE_VIEW_KEY, view);
-}
-
-function loadActiveView(): 'menu' | 'test' | 'essay' | null {
-  const saved = localStorage.getItem(ACTIVE_VIEW_KEY);
-  if (saved === 'menu' || saved === 'test' || saved === 'essay') {
-    return saved;
-  }
-  return null;
-}
-
-function clearActiveView(): void {
-  localStorage.removeItem(ACTIVE_VIEW_KEY);
-}
-
 // ============== API SERVICE ==============
-async function generateTask(taskType: 'reading' | 'use-of-english' | 'speaking'): Promise<Task> {
+async function generateTask(taskType: 'reading' | 'use-of-english' | 'speaking' | 'listening'): Promise<Task> {
   const readingPrompt = `Generate a B2-C1 level English reading test in olympiad style. Return ONLY valid JSON (no markdown) with this EXACT structure:
 {
   "type": "reading",
@@ -330,7 +305,7 @@ REQUIREMENTS:
 - Section 1 Part 1: 6 TRUE/FALSE/NOT GIVEN questions (ids 1-6)
 - Section 1 Part 2: 5 multiple choice questions (ids 7-11)
 - Section 2: 3 different short unrelated texts, each with 4 multiple choice questions (ids 12-23)
-- Total: 21-28 questions`;
+- Total: 23 questions`;
 
   const useOfEnglishPrompt = `Generate a B2-C1 level Use of English test in olympiad style. Return ONLY valid JSON (no markdown) with this EXACT structure:
 {
@@ -360,9 +335,8 @@ REQUIREMENTS:
 - Task 1: 9 gap-fill multiple choice questions (ids 1-9)
 - Task 2: 6 verb tense sentences (ids 10-15)
 - Task 3: 5 one-word-fits-all questions (ids 16-20)
-- Total: 20-25 questions`;
+- Total: 20 questions`;
 
-  // UPDATED SPEAKING PROMPT
   const speakingPrompt = `Generate a diverse B2-C1 level English Speaking Task. Return ONLY valid JSON (no markdown) with this EXACT structure:
   {
     "type": "speaking",
@@ -380,9 +354,39 @@ REQUIREMENTS:
   3. QUESTIONS: Generate 5 questions. They must be SHORT, PUNCHY, and COMPACT (max 10-15 words each). Avoid long, winding questions.
   `;
 
+  const listeningPrompt = `Generate a B2-C1 level English Listening Task. Return ONLY valid JSON (no markdown) with this EXACT structure:
+{
+  "type": "listening",
+  "title": "Listening Comprehension",
+  "topic": "Interview / Radio Show Topic",
+  "audioScript": [
+    {"speaker": "A", "text": "Host: Welcome to the show. Today we discuss..."},
+    {"speaker": "B", "text": "Guest: Thanks for having me. It is a fascinating topic..."}
+  ],
+  "section1": {
+    "instructions": "Listen to the recording and decide if the following statements are TRUE, FALSE, or NOT GIVEN.",
+    "questions": [
+      {"id": 1, "type": "true-false", "statement": "Statement about the dialogue", "correctAnswer": "TRUE"}
+    ]
+  },
+  "section2": {
+    "instructions": "Listen again and choose the correct answer A, B, C, or D.",
+    "questions": [
+      {"id": 7, "type": "multiple-choice", "question": "What does the guest say about X?", "options": ["A", "B", "C", "D"], "correctAnswer": 0}
+    ]
+  }
+}
+REQUIREMENTS:
+- The 'audioScript' must be a dialogue between two people (Host/Guest, or Two Friends).
+- The script should be around 400-500 words long, split into conversational turns.
+- Section 1: 6 True/False/Not Given questions (ids 1-6).
+- Section 2: 4 Multiple Choice questions (ids 7-10).
+- Topic: Something academic or social (e.g., Space Exploration, remote work, modern art, sustainable living).`;
+
   let prompt = '';
   if (taskType === 'reading') prompt = readingPrompt;
   else if (taskType === 'use-of-english') prompt = useOfEnglishPrompt;
+  else if (taskType === 'listening') prompt = listeningPrompt;
   else prompt = speakingPrompt;
 
   const response = await fetch(API_URL, {
@@ -390,7 +394,7 @@ REQUIREMENTS:
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 1.0 } // Increased to 1.0 for maximum variety in Speaking
+      generationConfig: { temperature: 1.0 }
     })
   });
 
@@ -400,18 +404,38 @@ REQUIREMENTS:
   }
 
   const data = await response.json();
+  
   const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!responseText) throw new Error('Empty response from API');
 
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Invalid JSON response');
 
-  try {
-    return JSON.parse(jsonMatch[0]) as Task;
-  } catch (parseError) {
-    console.error('JSON Parsing Error for generateTask:', parseError);
-    throw new Error('Failed to parse generated task: Invalid JSON structure.');
+  let task = JSON.parse(jsonMatch[0]) as Task;
+
+  // NEW: If it's a listening task, generate the audio file via backend
+  if (task.type === 'listening') {
+    try {
+      const audioResponse = await fetch(BACKEND_AUDIO_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioScript: (task as ListeningTask).audioScript })
+      });
+
+      if (!audioResponse.ok) {
+        const errorData = await audioResponse.json().catch(() => ({}));
+        throw new Error(`Audio backend error ${audioResponse.status}: ${JSON.stringify(errorData)}`);
+      }
+
+      const audioData = await audioResponse.json();
+      (task as ListeningTask).audioUrl = audioData.audioUrl; // Add the generated audio URL to the task
+    } catch (audioError) {
+      console.error('Failed to generate listening audio:', audioError);
+      throw new Error('Failed to generate listening audio. Check backend server.');
+    }
   }
+
+  return task;
 }
 
 async function evaluateEssay(essay: string, topic: EssayTopic): Promise<EssayEvaluation> {
@@ -475,16 +499,12 @@ IMPORTANT RULES:
   if (!response.ok) throw new Error('Evaluation failed');
 
   const data = await response.json();
+  
   const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
   const jsonMatch = responseText?.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Invalid JSON response');
 
-  try {
-    return JSON.parse(jsonMatch[0]) as EssayEvaluation;
-  } catch (parseError) {
-    console.error('JSON Parsing Error for evaluateEssay:', parseError);
-    throw new Error('Failed to parse essay evaluation: Invalid JSON structure.');
-  }
+  return JSON.parse(jsonMatch[0]) as EssayEvaluation;
 }
 
 async function generateEssayTopic(): Promise<EssayTopic> {
@@ -512,54 +532,12 @@ The task should be appropriate for an English olympiad and require 150-160 words
   if (!response.ok) throw new Error('Failed to generate topic');
 
   const data = await response.json();
+  
   const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
   const jsonMatch = responseText?.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Invalid response');
 
-  try {
-    return JSON.parse(jsonMatch[0]) as EssayTopic;
-  } catch (parseError) {
-    console.error('JSON Parsing Error for generateEssayTopic:', parseError);
-    throw new Error('Failed to parse generated essay topic: Invalid JSON structure.');
-  }
-}
-
-// ============== DB SERVICE ==============
-async function saveTestResult(result: TestResult) {
-  const { error } = await supabase.from('test_results').insert([result]);
-  if (error) console.error('Error saving test result:', error);
-}
-
-async function saveGeneratedTest(testData: Partial<PracticeTest>) {
-    const { data, error } = await supabase.from('tests').insert([testData]).select();
-    if (error) {
-        console.error('Error saving generated test:', error);
-        throw error;
-    }
-    return data ? data[0] : null;
-}
-
-async function getPracticeTests(): Promise<PracticeTest[]> {
-  const { data, error } = await supabase.from('tests').select('*').eq('is_published', true).order('created_at', { ascending: false });
-  if (error) {
-    console.error('Error fetching practice tests:', error);
-    return [];
-  }
-  return (data as PracticeTest[]) || [];
-}
-
-async function getUserResults(userId: string): Promise<TestResult[]> {
-  const { data, error } = await supabase.from('test_results').select('*').eq('user_id', userId).order('test_date', { ascending: false });
-  if (error) {
-    console.error('Error fetching user results:', error);
-    return [];
-  }
-  return (data as TestResult[]) || [];
-}
-
-async function updatePracticeTestCompleters(testId: number, completers: string[]) {
-  const { error } = await supabase.from('tests').update({ who_completed: completers }).eq('id', testId);
-  if (error) console.error('Error updating completers:', error);
+  return JSON.parse(jsonMatch[0]) as EssayTopic;
 }
 
 // ============== TEST RENDERER ==============
@@ -568,54 +546,296 @@ class TestRenderer {
   private container: HTMLElement;
   private answers: Record<string, string | number> = {};
   private submitted: boolean = false;
-  private user: { id: string; first_name?: string };
-  private practiceTest: PracticeTest | null = null;
   
   // Timer specific properties
   private timerInterval: any = null;
-  private timerSaveInterval: any = null;
-  private totalTimeSeconds: number;
-  private remainingTime: number;
+  private totalTimeSeconds: number = 60; // default
+  private remainingTime: number = 60;
   private isTimerRunning: boolean = false;
 
-  constructor(task: Task, container: HTMLElement, user: { id: string, first_name?: string }, timeLimitMinutes: number, practiceTest: PracticeTest | null = null, savedState: SavedTestState | null) {
+  // Audio Player properties (New: using HTMLAudioElement instead of SpeechSynthesis)
+  private audioElement: HTMLAudioElement | null = null;
+  // private synth: SpeechSynthesis = window.speechSynthesis; // Removed
+  // private voices: SpeechSynthesisVoice[] = []; // Removed
+  // private isPlaying: boolean = false; // Removed
+  // private isPaused: boolean = false; // Removed
+  // private currentUtteranceIndex: number = 0; // Removed
+  // private currentAudioCharPosition: number = 0; // Removed
+  // private utterances: SpeechSynthesisUtterance[] = []; // Removed
+  // private totalScriptChars: number = 0; // Removed
+  // private utteranceCharOffsets: number[] = []; // Removed
+  // private estimatedTotalTime: number = 0; // Removed
+  // private elapsedTime: number = 0; // Removed
+
+  constructor(task: Task, container: HTMLElement, savedAnswers?: Record<string, string | number>) { // Removed savedListeningPlaybackState parameter
     this.task = task;
     this.container = container;
-    this.user = user;
-    this.practiceTest = practiceTest;
-    this.totalTimeSeconds = timeLimitMinutes * 60;
+    if (savedAnswers) this.answers = savedAnswers;
     
-    if (savedState) {
-        this.answers = savedState.answers;
-        this.remainingTime = savedState.remainingTime;
-    } else {
-        this.answers = {};
-        this.remainingTime = this.totalTimeSeconds;
-    }
+    // Removed voices setup
+    // this.voices = this.synth.getVoices();
+    // if (this.voices.length === 0) {
+    //   this.synth.onvoiceschanged = () => {
+    //     this.voices = this.synth.getVoices();
+    //     if (this.task.type === 'listening' && this.utterances.length === 0) {
+    //       this.setupAudioPlayer(this.task as ListeningTask, savedListeningPlaybackState);
+    //     }
+    //   };
+    // }
 
-    this.render();
+    this.render(); // Removed savedListeningPlaybackState parameter
   }
 
-  private render(): void {
+  private render(): void { // Removed savedListeningPlaybackState parameter
     if (this.task.type === 'reading') {
       this.renderReadingTask(this.task);
+      this.attachEventListeners();
     } else if (this.task.type === 'use-of-english') {
       this.renderUseOfEnglishTask(this.task);
+      this.attachEventListeners();
+    } else if (this.task.type === 'listening') {
+      this.renderListeningTask(this.task as ListeningTask); // Cast task to ListeningTask
+      // New: Initialize audio player controls after rendering
+      this.initAudioPlayerControls();
+      this.attachEventListeners();
     } else {
-      this.renderSpeakingTask(this.task);
-      // Speaking listeners are attached inside renderSpeakingTask for cleaner logic separation
-      return;
+      this.renderSpeakingTask(this.task as SpeakingTask);
     }
     
-    this.attachEventListeners();
-    this.restoreAnswers();
-    this.startTestTimer();
+    if (this.task.type !== 'speaking') {
+      this.restoreAnswers();
+    }
   }
 
   private escapeHtml(text: string): string {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  // --- AUDIO PLAYER LOGIC (Completely rewritten for HTMLAudioElement) ---
+  private initAudioPlayerControls(): void {
+    this.audioElement = this.container.querySelector('#hidden-audio-player') as HTMLAudioElement;
+    if (!this.audioElement) {
+      console.error("Audio element not found!");
+      this.updatePlayerUI('error', 'Audio player not initialized.');
+      return;
+    }
+
+    const playBtn = this.container.querySelector('#audio-play-btn') as HTMLButtonElement;
+    const resetBtn = this.container.querySelector('#audio-reset-btn') as HTMLButtonElement;
+    const progressBar = this.container.querySelector('.audio-progress-bar') as HTMLElement;
+    const currentTimeEl = this.container.querySelector('.audio-current-time') as HTMLElement;
+    const totalTimeEl = this.container.querySelector('.audio-total-time') as HTMLElement;
+    const statusText = this.container.querySelector('.audio-status-text') as HTMLElement;
+    const progressFill = this.container.querySelector('.audio-progress-fill') as HTMLElement;
+    
+    // Transcript toggle
+    const transcriptBtn = this.container.querySelector('#btn-toggle-transcript');
+    const transcriptDiv = this.container.querySelector('#transcript-content');
+    
+    // Initial state setup and duration display
+    this.audioElement.onloadedmetadata = () => {
+      if (totalTimeEl) totalTimeEl.textContent = this.formatTime(this.audioElement!.duration);
+      this.updatePlayerUI('ready');
+    };
+    this.audioElement.onloadstart = () => {
+      this.updatePlayerUI('loading', 'Loading audio...');
+    };
+    this.audioElement.oncanplaythrough = () => {
+      this.updatePlayerUI(this.audioElement!.paused ? 'paused' : 'ready'); // Or 'ready' if just loaded
+      if (statusText && this.audioElement!.paused) statusText.textContent = 'Ready to play';
+    };
+
+    playBtn?.addEventListener('click', () => {
+      if (this.audioElement?.paused || this.audioElement?.ended) {
+        this.audioElement?.play();
+      } else {
+        this.audioElement?.pause();
+      }
+    });
+    
+    resetBtn?.addEventListener('click', () => {
+      this.audioElement?.pause();
+      this.audioElement!.currentTime = 0;
+      this.updatePlayerUI('ready');
+      this.updateProgress(0);
+      this.updateTimerDisplay();
+    });
+
+    progressBar?.addEventListener('click', (e) => {
+      if (!this.audioElement || isNaN(this.audioElement.duration)) return;
+      const rect = progressBar.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const width = rect.width;
+      const seekTime = (x / width) * this.audioElement.duration;
+      this.audioElement.currentTime = seekTime;
+    });
+
+    this.audioElement.ontimeupdate = () => {
+      if (!this.audioElement || isNaN(this.audioElement.duration)) return;
+      const progress = this.audioElement.currentTime / this.audioElement.duration;
+      this.updateProgress(progress);
+      this.updateTimerDisplay();
+    };
+
+    this.audioElement.onplay = () => this.updatePlayerUI('playing');
+    this.audioElement.onpause = () => {
+      if (!this.audioElement?.ended) this.updatePlayerUI('paused');
+    };
+    this.audioElement.onended = () => this.updatePlayerUI('finished');
+    this.audioElement.onerror = (e) => {
+      console.error("Audio error:", e);
+      this.updatePlayerUI('error', 'Error loading audio.');
+    };
+
+    // Transcript toggle
+    transcriptBtn?.addEventListener('click', () => {
+      transcriptDiv?.classList.toggle('hidden');
+      transcriptBtn.textContent = transcriptDiv?.classList.contains('hidden') ? 'Show Transcript' : 'Hide Transcript';
+    });
+
+    // Initial display update
+    this.updateTimerDisplay();
+  }
+
+  private updateProgress(fraction: number): void {
+    const fill = this.container.querySelector('.audio-progress-fill') as HTMLElement;
+    if (fill) fill.style.width = `${fraction * 100}%`;
+  }
+
+  private updatePlayerUI(state: 'playing' | 'paused' | 'ready' | 'finished' | 'loading' | 'error', message?: string): void {
+    const playBtn = this.container.querySelector('#audio-play-btn') as HTMLButtonElement;
+    const statusText = this.container.querySelector('.audio-status-text') as HTMLElement;
+    const resetBtn = this.container.querySelector('#audio-reset-btn') as HTMLButtonElement;
+    
+    if (!playBtn || !statusText || !resetBtn) return;
+
+    statusText.textContent = message || ''; // Use provided message or default based on state
+
+    switch (state) {
+      case 'playing':
+        playBtn.innerHTML = '❚❚ Pause';
+        playBtn.disabled = false;
+        resetBtn.disabled = false;
+        statusText.textContent = message || 'Playing...';
+        break;
+      case 'paused':
+        playBtn.innerHTML = '▶ Resume';
+        playBtn.disabled = false;
+        resetBtn.disabled = false;
+        statusText.textContent = message || 'Paused';
+        break;
+      case 'finished':
+        playBtn.innerHTML = '▶ Play';
+        playBtn.disabled = false;
+        resetBtn.disabled = false;
+        statusText.textContent = message || 'Finished. Press ↩ to replay.';
+        this.updateProgress(1); // Ensure it's 100%
+        break;
+      case 'loading':
+        playBtn.innerHTML = '▶ Play';
+        playBtn.disabled = true;
+        resetBtn.disabled = true;
+        statusText.textContent = message || 'Loading audio...';
+        break;
+      case 'error':
+        playBtn.innerHTML = '▶ Play';
+        playBtn.disabled = true;
+        resetBtn.disabled = true;
+        statusText.textContent = message || 'Error playing audio.';
+        break;
+      case 'ready':
+      default:
+        playBtn.innerHTML = '▶ Play';
+        playBtn.disabled = false;
+        resetBtn.disabled = false;
+        statusText.textContent = message || 'Ready to play';
+        break;
+    }
+  }
+
+  private formatTime(seconds: number): string {
+    if (isNaN(seconds)) return '00:00';
+    const min = Math.floor(seconds / 60);
+    const sec = Math.floor(seconds % 60);
+    return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  private updateTimerDisplay(): void {
+    const currentTimeEl = this.container.querySelector('.audio-current-time') as HTMLElement;
+    const totalTimeEl = this.container.querySelector('.audio-total-time') as HTMLElement;
+    if (this.audioElement) {
+      if (currentTimeEl) currentTimeEl.textContent = this.formatTime(this.audioElement.currentTime);
+      if (totalTimeEl) totalTimeEl.textContent = this.formatTime(this.audioElement.duration);
+    } else {
+      if (currentTimeEl) currentTimeEl.textContent = '00:00';
+      if (totalTimeEl) totalTimeEl.textContent = '00:00';
+    }
+  }
+  
+  private renderListeningTask(task: ListeningTask): void { // Changed parameter type
+    this.container.innerHTML = `
+      <div class="test-wrapper">
+        <div class="test-header">
+          <h2>${this.escapeHtml(task.title)}</h2>
+          <span class="test-badge">Listening • B2-C1 Level</span>
+        </div>
+        
+        <!-- Audio Player Section -->
+        <div class="audio-player-card">
+          <div class="audio-info">
+            <div class="audio-icon">🎧</div>
+            <div>
+              <h3>Topic: ${this.escapeHtml(task.topic)}</h3>
+              <p class="audio-status-text">Ready to play</p>
+            </div>
+          </div>
+          
+          <div class="audio-controls">
+            <button id="audio-reset-btn" title="Reset" class="btn-audio-control secondary">↩</button>
+            <button id="audio-play-btn" class="btn-audio-control">▶ Play</button>
+            <div class="audio-progress-container">
+              <span class="audio-time audio-current-time">00:00</span>
+              <div class="audio-progress-bar">
+                <div class="audio-progress-fill" style="width: 0%"></div>
+              </div>
+              <span class="audio-time audio-total-time">00:00</span>
+            </div>
+          </div>
+          <audio id="hidden-audio-player" src="${this.escapeHtml(task.audioUrl)}" preload="auto" style="display:none;"></audio>
+        </div>
+
+        <section class="test-section">
+          <h3>Section 1</h3>
+          <p class="task-instructions">${this.escapeHtml(task.section1.instructions)}</p>
+          <div class="questions-list">
+            ${task.section1.questions.map(q => this.renderTrueFalseQuestion(q)).join('')}
+          </div>
+        </section>
+
+        <section class="test-section">
+          <h3>Section 2</h3>
+          <p class="task-instructions">${this.escapeHtml(task.section2.instructions)}</p>
+          <div class="questions-list">
+            ${task.section2.questions.map(q => this.renderMultipleChoiceQuestion(q)).join('')}
+          </div>
+        </section>
+
+        <button class="btn-submit">Submit Test</button>
+        <div class="results-container"></div>
+
+        <div class="transcript-section">
+           <button id="btn-toggle-transcript" class="btn-secondary">Show Transcript</button>
+           <div id="transcript-content" class="transcript-content hidden">
+             <h4>Audio Script</h4>
+             ${task.audioScript.map(line => `
+               <p class="script-line"><strong>${line.speaker}:</strong> ${this.escapeHtml(line.text)}</p>
+             `).join('')}
+           </div>
+        </div>
+      </div>
+    `;
   }
 
   private renderSpeakingTask(task: SpeakingTask): void {
@@ -748,7 +968,7 @@ class TestRenderer {
 
     // Reload Page logic
     this.container.querySelector('#finish-speaking')?.addEventListener('click', () => {
-      // clearState() is not used here as speaking is not a persistent test
+      clearState();
       if (this.timerInterval) clearInterval(this.timerInterval);
       window.location.reload();
     });
@@ -809,143 +1029,79 @@ class TestRenderer {
     ring.style.strokeDashoffset = offset.toString();
   }
 
-  private startTestTimer() {
-      const timerEl = this.container.querySelector('#test-timer');
-      if (!timerEl) return;
-
-      // Save timer state every 5 seconds
-      this.timerSaveInterval = setInterval(() => {
-          if (!this.submitted) {
-              saveState({
-                  task: this.task,
-                  answers: this.answers,
-                  remainingTime: this.remainingTime,
-                  practiceTest: this.practiceTest,
-              });
-          }
-      }, 5000);
-
-      this.timerInterval = setInterval(() => {
-          if (this.remainingTime > 0) {
-            this.remainingTime--;
-          }
-          this.updateTimerDisplay();
-          
-          if (this.remainingTime <= 0) {
-              clearInterval(this.timerInterval);
-              if (this.timerSaveInterval) clearInterval(this.timerSaveInterval);
-              if(!this.submitted) {
-                alert("Time's up! Your test will be submitted automatically.");
-                this.submitTest();
-              }
-          }
-      }, 1000);
-  }
-
-  private updateTimerDisplay() {
-      const timerEl = this.container.querySelector('#test-timer');
-      if (timerEl) {
-          const minutes = Math.floor(this.remainingTime / 60).toString().padStart(2, '0');
-          const seconds = (this.remainingTime % 60).toString().padStart(2, '0');
-          timerEl.textContent = `${minutes}:${seconds}`;
-      }
-  }
-
   private renderReadingTask(task: ReadingTask): void {
     this.container.innerHTML = `
-      <div class="speaking-layout">
-        <div class="timer-column">
-          <div class="timer-card">
-            <h4>Time Remaining</h4>
-            <div class="timer-display" id="test-timer">--:--</div>
-          </div>
-          <button class="btn-submit">Submit Test</button>
+      <div class="test-wrapper">
+        <div class="test-header">
+          <h2>${this.escapeHtml(task.title)}</h2>
+          <span class="test-badge">Reading • B2-C1 Level</span>
         </div>
-        <div class="content-column">
-          <div class="test-wrapper">
-            <div class="test-header">
-              <h2>${this.escapeHtml(task.title)}</h2>
-              <span class="test-badge">Reading • B2-C1 Level</span>
+        <section class="test-section">
+          <h3>Section 1</h3>
+          <div class="passage-card">
+            <div class="passage-text">${this.escapeHtml(task.section1.passage)}</div>
+          </div>
+          <div class="task-block">
+            <h4>Part A: True / False / Not Given</h4>
+            <p class="task-instructions">${this.escapeHtml(task.section1.part1.instructions)}</p>
+            <div class="questions-list">
+              ${task.section1.part1.questions.map(q => this.renderTrueFalseQuestion(q)).join('')}
             </div>
-            <section class="test-section">
-              <h3>Section 1</h3>
-              <div class="passage-card">
-                <div class="passage-text">${this.escapeHtml(task.section1.passage)}</div>
-              </div>
-              <div class="task-block">
-                <h4>Part A: True / False / Not Given</h4>
-                <p class="task-instructions">${this.escapeHtml(task.section1.part1.instructions)}</p>
-                <div class="questions-list">
-                  ${task.section1.part1.questions.map(q => this.renderTrueFalseQuestion(q)).join('')}
-                </div>
-              </div>
-              <div class="task-block">
-                <h4>Part B: Multiple Choice</h4>
-                <p class="task-instructions">${this.escapeHtml(task.section1.part2.instructions)}</p>
-                <div class="questions-list">
-                  ${task.section1.part2.questions.map(q => this.renderMultipleChoiceQuestion(q)).join('')}
-                </div>
-              </div>
-            </section>
-            <section class="test-section">
-              <h3>Section 2: Short Texts</h3>
-              <p class="task-instructions">${this.escapeHtml(task.section2.instructions)}</p>
-              ${task.section2.texts.map(t => this.renderShortText(t)).join('')}
-            </section>
-            <div class="results-container" style="margin-top: 32px;"></div>
           </div>
-        </div>
+          <div class="task-block">
+            <h4>Part B: Multiple Choice</h4>
+            <p class="task-instructions">${this.escapeHtml(task.section1.part2.instructions)}</p>
+            <div class="questions-list">
+              ${task.section1.part2.questions.map(q => this.renderMultipleChoiceQuestion(q)).join('')}
+            </div>
+          </div>
+        </section>
+        <section class="test-section">
+          <h3>Section 2: Short Texts</h3>
+          <p class="task-instructions">${this.escapeHtml(task.section2.instructions)}</p>
+          ${task.section2.texts.map(t => this.renderShortText(t)).join('')}
+        </section>
+        <button class="btn-submit">Submit Test</button>
+        <div class="results-container"></div>
       </div>
     `;
-    this.updateTimerDisplay();
   }
 
   private renderUseOfEnglishTask(task: UseOfEnglishTask): void {
     this.container.innerHTML = `
-      <div class="speaking-layout">
-        <div class="timer-column">
-          <div class="timer-card">
-            <h4>Time Remaining</h4>
-            <div class="timer-display" id="test-timer">--:--</div>
-          </div>
-          <button class="btn-submit">Submit Test</button>
+      <div class="test-wrapper">
+        <div class="test-header">
+          <h2>${this.escapeHtml(task.title)}</h2>
+          <span class="test-badge">Use of English • B2-C1 Level</span>
         </div>
-        <div class="content-column">
-          <div class="test-wrapper">
-            <div class="test-header">
-              <h2>${this.escapeHtml(task.title)}</h2>
-              <span class="test-badge">Use of English • B2-C1 Level</span>
-            </div>
-            <section class="test-section">
-              <h3>Task 1: Gap Fill</h3>
-              <p class="task-instructions">${this.escapeHtml(task.task1.instructions)}</p>
-              <div class="passage-card">
-                <div class="passage-text">${this.escapeHtml(task.task1.passage)}</div>
-              </div>
-              <div class="questions-list">
-                ${task.task1.questions.map(q => this.renderMultipleChoiceQuestion(q)).join('')}
-              </div>
-            </section>
-            <section class="test-section">
-              <h3>Task 2: Verb Tenses</h3>
-              <p class="task-instructions">${this.escapeHtml(task.task2.instructions)}</p>
-              <div class="questions-list">
-                ${task.task2.sentences.map(q => this.renderTextInputQuestion(q)).join('')}
-              </div>
-            </section>
-            <section class="test-section">
-              <h3>Task 3: One Word</h3>
-              <p class="task-instructions">${this.escapeHtml(task.task3.instructions)}</p>
-              <div class="questions-list">
-                ${task.task3.questions.map(q => this.renderTextInputQuestion(q, true)).join('')}
-              </div>
-            </section>
-            <div class="results-container" style="margin-top: 32px;"></div>
+        <section class="test-section">
+          <h3>Task 1: Gap Fill</h3>
+          <p class="task-instructions">${this.escapeHtml(task.task1.instructions)}</p>
+          <div class="passage-card">
+            <div class="passage-text">${this.escapeHtml(task.task1.passage)}</div>
           </div>
-        </div>
+          <div class="questions-list">
+            ${task.task1.questions.map(q => this.renderMultipleChoiceQuestion(q)).join('')}
+          </div>
+        </section>
+        <section class="test-section">
+          <h3>Task 2: Verb Tenses</h3>
+          <p class="task-instructions">${this.escapeHtml(task.task2.instructions)}</p>
+          <div class="questions-list">
+            ${task.task2.sentences.map(q => this.renderTextInputQuestion(q)).join('')}
+          </div>
+        </section>
+        <section class="test-section">
+          <h3>Task 3: One Word</h3>
+          <p class="task-instructions">${this.escapeHtml(task.task3.instructions)}</p>
+          <div class="questions-list">
+            ${task.task3.questions.map(q => this.renderTextInputQuestion(q, true)).join('')}
+          </div>
+        </section>
+        <button class="btn-submit">Submit Test</button>
+        <div class="results-container"></div>
       </div>
     `;
-    this.updateTimerDisplay();
   }
 
   private renderTrueFalseQuestion(q: TrueFalseQuestion): string {
@@ -1007,20 +1163,11 @@ class TestRenderer {
   private attachEventListeners(): void {
     if (this.task.type === 'speaking') return;
 
-    const saveCurrentState = () => {
-        saveState({
-            task: this.task,
-            answers: this.answers,
-            remainingTime: this.remainingTime,
-            practiceTest: this.practiceTest,
-        });
-    };
-
     this.container.querySelectorAll('input[type="radio"]').forEach(input => {
       input.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
         this.answers[target.name] = target.value;
-        saveCurrentState();
+        saveState(this.task, this.answers); // Changed to direct saveState
       });
     });
 
@@ -1028,7 +1175,7 @@ class TestRenderer {
       input.addEventListener('input', (e) => {
         const target = e.target as HTMLInputElement;
         this.answers[target.name] = target.value;
-        saveCurrentState();
+        saveState(this.task, this.answers); // Changed to direct saveState
       });
     });
 
@@ -1054,41 +1201,26 @@ class TestRenderer {
   }
 
   private submitTest(): void {
-    if (this.timerInterval) clearInterval(this.timerInterval);
-    if (this.timerSaveInterval) clearInterval(this.timerSaveInterval);
-    if (this.submitted) return;
     this.submitted = true;
     let correct = 0;
     let total = 0;
-    const sectionScores: Record<string, { score: number; maxScore: number }> = {};
 
-    const getSectionName = (card: HTMLElement): string => {
-        const taskBlock = card.closest('.task-block');
-        if (taskBlock) {
-            const titleEl = taskBlock.querySelector('h4');
-            if (titleEl) return titleEl.textContent || 'Unnamed Task';
-        }
-        const sectionEl = card.closest('.test-section');
-        if (sectionEl) {
-            const titleEl = sectionEl.querySelector('h3');
-            if (titleEl) return titleEl.textContent || 'Unnamed Section';
-        }
-        return 'General';
-    };
+    // Stop audio if playing
+    if (this.task.type === 'listening') {
+      this.audioElement?.pause();
+      this.audioElement!.currentTime = 0;
+      this.updatePlayerUI('ready'); // Reset UI after submission
+    }
+    
+    // Always clear state on submission, as per original logic for non-listening too.
+    clearState(); 
 
     this.container.querySelectorAll('.question-card').forEach(card => {
       const id = card.getAttribute('data-id');
       const type = card.getAttribute('data-type');
       const correctAnswer = card.getAttribute('data-correct');
       const userAnswer = this.answers[`q${id}`];
-      const sectionName = getSectionName(card as HTMLElement);
       total++;
-
-      if (!sectionScores[sectionName]) {
-          sectionScores[sectionName] = { score: 0, maxScore: 0 };
-      }
-      sectionScores[sectionName].maxScore++;
-
 
       let isCorrect = false;
       if (type === 'text-input') {
@@ -1103,7 +1235,6 @@ class TestRenderer {
 
       if (isCorrect) {
         correct++;
-        sectionScores[sectionName].score++;
         card.classList.add('correct');
       } else {
         card.classList.add('incorrect');
@@ -1118,34 +1249,8 @@ class TestRenderer {
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitted';
 
-    const percentage = Math.round((correct / total) * 100);
-    const passed = percentage >= 50;
-
-    const result: TestResult = {
-        user_id: this.user.id,
-        test_name: this.practiceTest?.name || this.task.title,
-        score: correct,
-        total_questions: total,
-        passed,
-        test_date: new Date().toISOString(),
-        sections: Object.entries(sectionScores).map(([section, scores]) => ({
-            section,
-            score: scores.score,
-            maxScore: scores.maxScore
-        }))
-    };
-    saveTestResult(result);
-    clearState();
-
-    if (this.practiceTest && this.user.first_name) {
-        const newCompleters = [...(this.practiceTest.who_completed || []), this.user.first_name];
-        updatePracticeTestCompleters(this.practiceTest.id, newCompleters);
-    }
-    
     const resultsContainer = this.container.querySelector('.results-container')!;
-
-    const submitBtnInSidebar = this.container.querySelector('.timer-column .btn-submit') as HTMLElement;
-    if (submitBtnInSidebar) submitBtnInSidebar.style.display = 'none';
+    const percentage = Math.round((correct / total) * 100);
 
     resultsContainer.innerHTML = `
       <div class="results-panel">
@@ -1155,13 +1260,16 @@ class TestRenderer {
         </div>
         <p class="score-detail">${correct} out of ${total} correct</p>
         <p class="feedback">${this.getFeedback(percentage)}</p>
-        <button class="btn-new-test">Finish & Go to Menu</button>
+        <button class="btn-new-test">Take New Test</button>
       </div>
     `;
 
     resultsContainer.querySelector('.btn-new-test')?.addEventListener('click', () => {
+      clearState(); // Clear state after user requests new test
       window.location.reload();
     });
+
+    // clearState(); // Moved clearing logic to specific points: resetAudio, submitTest, new-test button
   }
 
   private getFeedback(score: number): string {
@@ -1176,23 +1284,20 @@ class TestRenderer {
 class EssayRenderer {
   private container: HTMLElement;
   private currentTopic: EssayTopic | null = null;
-  private user: { id: string };
   private escapeHtml(text: string): string {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
   }
 
-  constructor(container: HTMLElement, user: { id: string }) {
+  constructor(container: HTMLElement) {
     this.container = container;
-    this.user = user;
     this.render();
   }
 
   private render(): void {
     const savedDraft = loadEssayDraft();
     const savedTopic = loadSelectedEssayTopic();
-    const hasSavedWork = savedTopic && savedDraft && savedDraft.text.trim().length > 0;
     
     this.container.innerHTML = `
       <div class="test-wrapper essay-wrapper">
@@ -1201,23 +1306,7 @@ class EssayRenderer {
           <span class="test-badge">Writing • B2-C1 Level</span>
         </div>
 
-        ${hasSavedWork ? `
-        <section class="test-section saved-draft-section">
-          <div class="saved-draft-banner">
-            <div class="saved-draft-info">
-              <h4>📝 You have an unfinished essay</h4>
-              <p>Topic: <strong>${this.escapeHtml(savedTopic!.title)}</strong></p>
-              <p class="draft-preview">"${this.escapeHtml(savedDraft!.text.substring(0, 100))}${savedDraft!.text.length > 100 ? '...' : ''}"</p>
-            </div>
-            <div class="saved-draft-actions">
-              <button class="btn-continue-draft">Continue Writing</button>
-              <button class="btn-discard-draft">Start Fresh</button>
-            </div>
-          </div>
-        </section>
-        ` : ''}
-
-        <section class="test-section" id="topic-selection-section" ${hasSavedWork ? 'style="display: none;"' : ''}>
+        <section class="test-section">
           <h3>Choose Your Topic</h3>
           <div class="topic-selection">
             <select id="topic-select" class="topic-dropdown">
@@ -1253,7 +1342,7 @@ class EssayRenderer {
         <section class="test-section" id="writing-section" style="display: none;">
           <h3>Your Essay</h3>
           <div class="essay-container">
-            <textarea id="essay-textarea" class="essay-textarea" placeholder="Write your essay here..."></textarea>
+            <textarea id="essay-textarea" class="essay-textarea" placeholder="Write your essay here...">${savedDraft?.text || ''}</textarea>
             <div class="essay-footer">
               <span class="word-count">Words: 0</span>
               <span class="char-count">Characters: 0</span>
@@ -1273,36 +1362,21 @@ class EssayRenderer {
 
     this.attachEventListeners();
     
-    // Handle saved draft continuation
-    if (hasSavedWork) {
-      this.setupSavedDraftHandlers(savedTopic!, savedDraft!.text);
-    }
-  }
-
-  private setupSavedDraftHandlers(savedTopic: EssayTopic, savedText: string): void {
-    const continueBtn = this.container.querySelector('.btn-continue-draft');
-    const discardBtn = this.container.querySelector('.btn-discard-draft');
-    const savedDraftSection = this.container.querySelector('.saved-draft-section');
-    const topicSelectionSection = this.container.querySelector('#topic-selection-section') as HTMLElement;
-
-    continueBtn?.addEventListener('click', () => {
+    // Restore saved topic and draft
+    if (savedTopic) {
       this.currentTopic = savedTopic;
-      const textarea = this.container.querySelector('#essay-textarea') as HTMLTextAreaElement;
-      textarea.value = savedText;
-      
-      savedDraftSection?.remove();
-      this.displayTopic(savedTopic);
-      this.updateWordCount();
-    });
-
-    discardBtn?.addEventListener('click', () => {
-      if (confirm('Are you sure you want to discard your saved essay? This cannot be undone.')) {
-        clearEssayDraft();
-        clearSelectedEssayTopic();
-        savedDraftSection?.remove();
-        topicSelectionSection.style.display = 'block';
+      const select = this.container.querySelector('#topic-select') as HTMLSelectElement;
+      if (savedTopic.type === 'custom') {
+        select.value = 'custom';
+        // We don't show the inputs again if a custom topic is already active/saved
+        this.displayTopic(savedTopic);
+      } else {
+        const option = Array.from(select.options).find(o => o.value === String(savedTopic.id));
+        if (option) select.value = String(savedTopic.id);
+        this.displayTopic(savedTopic);
       }
-    });
+      this.updateWordCount();
+    }
   }
 
   private attachEventListeners(): void {
@@ -1313,8 +1387,6 @@ class EssayRenderer {
     const rateBtn = this.container.querySelector('.btn-rate-essay') as HTMLButtonElement;
     const clearBtn = this.container.querySelector('.btn-clear-essay') as HTMLButtonElement;
     const helpBtn = this.container.querySelector('.btn-help-essay') as HTMLButtonElement;
-
-    if (!topicSelect) return; // Topic select might not exist if continuing from saved draft
 
     topicSelect.addEventListener('change', async () => {
       const value = topicSelect.value;
@@ -1353,7 +1425,7 @@ class EssayRenderer {
       }
     });
 
-    confirmCustomBtn?.addEventListener('click', () => {
+    confirmCustomBtn.addEventListener('click', () => {
       const titleInput = this.container.querySelector('#custom-title') as HTMLInputElement;
       const promptInput = this.container.querySelector('#custom-prompt') as HTMLTextAreaElement;
       
@@ -1378,19 +1450,19 @@ class EssayRenderer {
       this.displayTopic(customTopic);
     });
 
-    textarea?.addEventListener('input', () => {
+    textarea.addEventListener('input', () => {
       this.updateWordCount();
       if (this.currentTopic) {
         saveEssayDraft(this.currentTopic.id, textarea.value);
       }
     });
 
-    helpBtn?.addEventListener('click', () => {
+    helpBtn.addEventListener('click', () => {
       if (!this.currentTopic) return;
       this.showHelpAdvice();
     });
 
-    clearBtn?.addEventListener('click', () => {
+    clearBtn.addEventListener('click', () => {
       if (confirm('Are you sure you want to clear your essay?')) {
         textarea.value = '';
         this.updateWordCount();
@@ -1399,7 +1471,7 @@ class EssayRenderer {
       }
     });
 
-    rateBtn?.addEventListener('click', async () => {
+    rateBtn.addEventListener('click', async () => {
       if (!this.currentTopic) return;
       
       const essay = textarea.value.trim();
@@ -1422,26 +1494,6 @@ class EssayRenderer {
       try {
         const evaluation = await evaluateEssay(essay, this.currentTopic);
         this.displayEvaluation(evaluation);
-
-        const result: TestResult = {
-            user_id: this.user.id,
-            test_name: `Essay: ${this.currentTopic.title}`,
-            score: evaluation.totalScore,
-            total_questions: 40,
-            passed: evaluation.totalScore >= 20, // 50% threshold
-            test_date: new Date().toISOString(),
-            sections: Object.entries(evaluation.categories).map(([name, category]) => ({
-                section: name.charAt(0).toUpperCase() + name.slice(1).replace(/([A-Z])/g, ' $1').trim(),
-                score: category.score,
-                maxScore: 10,
-            })),
-        };
-        saveTestResult(result);
-        
-        // Clear draft after successful evaluation
-        clearEssayDraft();
-        clearSelectedEssayTopic();
-        
       } catch (error) {
         console.error('Evaluation error:', error);
         resultsDiv.innerHTML = `<div class="error">❌ Failed to evaluate essay. Please try again.</div>`;
@@ -1696,227 +1748,10 @@ const STYLES = `
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 40px 20px;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    position: relative;
   }
 
   .test-page h1 { color: white; text-align: center; margin-bottom: 8px; font-size: 2.5rem; font-weight: 700; }
   .page-subtitle { color: rgba(255,255,255,0.8); text-align: center; margin-bottom: 32px; }
-
-  /* Back button - now part of flow, not absolute */
-  .back-button-container {
-    max-width: 900px;
-    margin: 0 auto 20px;
-  }
-  
-  .btn-back-to-menu {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    background: rgba(255,255,255,0.2);
-    color: white;
-    border: 1px solid rgba(255,255,255,0.4);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-back-to-menu:hover { background: rgba(255,255,255,0.4); }
-
-  /* Saved Draft Banner */
-  .saved-draft-banner {
-    background: linear-gradient(135deg, #fef3c7, #fde68a);
-    border: 2px solid #f59e0b;
-    border-radius: 12px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .saved-draft-info h4 {
-    margin: 0 0 8px 0;
-    color: #92400e;
-  }
-  .saved-draft-info p {
-    margin: 0 0 4px 0;
-    color: #78350f;
-  }
-  .draft-preview {
-    font-style: italic;
-    color: #a16207 !important;
-    font-size: 14px;
-  }
-  .saved-draft-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .btn-continue-draft {
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: 600;
-    background: var(--success);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-continue-draft:hover { background: #059669; }
-  .btn-discard-draft {
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: 600;
-    background: white;
-    color: var(--danger);
-    border: 2px solid var(--danger);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-discard-draft:hover { background: #fef2f2; }
-
-  /* New Test Layout with Sidebar */
-  .test-layout {
-    display: flex;
-    gap: 32px;
-    align-items: flex-start;
-  }
-  .test-main-content {
-    flex: 1;
-    min-width: 0;
-  }
-  .test-sidebar {
-    flex: 0 0 240px;
-    position: sticky;
-    top: 20px;
-  }
-  .timer-card {
-    background: var(--card-bg);
-    border-radius: var(--radius);
-    padding: 15px;
-    text-align: center;
-    box-shadow: var(--shadow);
-    margin-bottom: -5 px;
-  }
-  .timer-card h4 {
-    margin: 0 0 18px 0;
-    color: var(--text-muted);
-    font-size: 1rem;
-  }
-  .timer-display {
-    font-size: 2.5rem;
-    font-weight: 600;
-    color: var(--primary);
-    font-variant-numeric: tabular-nums;
-  }
-  .timer-column .btn-submit {
-      width: 100%;
-      padding: 16px;
-      font-size: 18px;
-      font-weight: 600;
-      background: linear-gradient(135deg, var(--success), #059669);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-top: 16px;
-  }
-   .timer-column .btn-submit:hover:not(:disabled) { 
-     transform: translateY(-2px); 
-     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); 
-   }
-   .timer-column .btn-submit:disabled { 
-     background: #cbd5e1; 
-     cursor: not-allowed; 
-   }
-
-  /* New Menu Styles */
-  .main-menu-card {
-    max-width: 900px;
-    margin: 0 auto;
-    background: var(--card-bg);
-    border-radius: var(--radius);
-    padding: 0;
-    box-shadow: var(--shadow);
-    overflow: hidden;
-  }
-  .menu-tabs {
-    display: flex;
-    background: #f8fafc;
-    border-bottom: 2px solid var(--border);
-    flex-wrap: wrap;
-  }
-  .menu-tabs button {
-    flex: 1;
-    padding: 16px 20px;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-muted);
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-    border-bottom: 4px solid transparent;
-    white-space: nowrap;
-  }
-  .menu-tabs button:hover { color: var(--text); }
-  .menu-tabs button.active {
-    color: var(--primary);
-    border-bottom-color: var(--primary);
-  }
-  .menu-content { padding: 32px; }
-
-  .btn-back-to-menu {
-    position: absolute;
-    top: 14px;
-    left: 20px;
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    background: rgba(255,255,255,0.2);
-    color: white;
-    border: 1px solid rgba(255,255,255,0.4);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    z-index: 10;
-  }
-  .btn-back-to-menu:hover { background: rgba(255,255,255,0.4); }
-
-  .practice-test-item {
-    padding: 20px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 16px;
-    transition: all 0.2s;
-  }
-  .practice-test-item:hover { border-color: var(--primary); }
-  .practice-test-item h4 { margin: 0 0 8px 0; }
-  .practice-test-item p { color: var(--text-muted); margin: 0 0 16px 0; }
-  
-  .results-history {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .result-card {
-    padding: 20px;
-    border-radius: 12px;
-    border-left: 5px solid;
-  }
-  .result-card.passed {
-    background: #f0fdf4;
-    border-color: var(--success);
-  }
-  .result-card.failed {
-    background: #fef2f2;
-    border-color: var(--danger);
-  }
-  .result-card h4 { margin: 0 0 8px 0; }
-  .result-card p { margin: 0; color: var(--text-muted); }
 
   .controls-card {
     max-width: 600px;
@@ -1968,13 +1803,6 @@ const STYLES = `
 
   .error { max-width: 600px; margin: 0 auto; padding: 24px; background: #fef2f2; color: var(--danger); border-radius: var(--radius); text-align: center; }
 
-  .test-layout .test-wrapper {
-      max-width: none;
-      box-shadow: none;
-      padding: 0;
-      background: transparent;
-  }
-
   .test-wrapper {
     max-width: 900px;
     margin: 0 auto;
@@ -1993,7 +1821,7 @@ const STYLES = `
     border-bottom: 2px solid var(--border);
   }
   .test-header h2 { margin: 0; color: var(--text); font-size: 1.75rem; }
-  .test-badge {
+   .test-badge {
     background: linear-gradient(135deg, var(--primary), #8b5cf6);
     color: white;
     padding: 8px 16px;
@@ -2033,7 +1861,104 @@ const STYLES = `
   }
   .passage-text { line-height: 1.8; color: var(--text); white-space: pre-wrap; }
 
- 
+  .questions-list { display: flex; flex-direction: column; gap: 16px; }
+  .question-card {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.2s;
+  }
+  .question-card:hover { border-color: #cbd5e1; }
+  .question-card.correct { border-color: var(--success); background: #f0fdf4; }
+  .question-card.incorrect { border-color: var(--danger); background: #fef2f2; }
+  .question-text { margin: 0 0 12px 0; color: var(--text); font-weight: 500; }
+  .question-context { margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 6px; line-height: 1.6; }
+
+  .tf-options { display: flex; gap: 12px; flex-wrap: wrap; }
+  .tf-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tf-option:hover { border-color: var(--primary); background: #f8fafc; }
+  .tf-option input:checked + span { color: var(--primary); font-weight: 600; }
+  .tf-option:has(input:checked) { border-color: var(--primary); background: #eef2ff; }
+
+  .mc-options { display: flex; flex-direction: column; gap: 8px; }
+  .mc-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .mc-option:hover { border-color: var(--primary); background: #f8fafc; }
+  .mc-option:has(input:checked) { border-color: var(--primary); background: #eef2ff; }
+  .option-letter {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--border);
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .mc-option:has(input:checked) .option-letter { background: var(--primary); color: white; }
+  .option-text { flex: 1; }
+
+  .text-answer {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 16px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+  }
+  .text-answer:focus { outline: none; border-color: var(--primary); }
+
+  .short-text-block { margin-bottom: 32px; padding: 24px; background: #fafafa; border-radius: 12px; }
+  .short-text-card { margin-bottom: 20px; }
+  .short-text-label { font-weight: 600; color: var(--primary); margin-bottom: 8px; }
+  .short
+  .test-section { margin-bottom: 40px; }
+  .test-section h3 {
+    color: var(--text);
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .test-section h3::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 24px;
+    background: var(--primary);
+    border-radius: 2px;
+  }
+
+  .task-block { margin-top: 24px; padding: 20px; background: #f8fafc; border-radius: 8px; }
+  .task-block h4 { color: var(--text); margin: 0 0 8px 0; font-size: 1rem; }
+  .task-instructions { color: var(--text-muted); font-style: italic; margin-bottom: 16px; }
+
+  .passage-card {
+    background: linear-gradient(to right, #fafafa, #f5f5f5);
+    border-left: 4px solid var(--primary);
+    padding: 24px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+  }
+  .passage-text { line-height: 1.8; color: var(--text); white-space: pre-wrap; }
 
   .questions-list { display: flex; flex-direction: column; gap: 16px; }
   .question-card {
@@ -2167,26 +2092,78 @@ const STYLES = `
 
   input[type="radio"] { width: 18px; height: 18px; cursor: pointer; }
 
-  /* --- SPEAKING LAYOUT & NEW TIMER --- */
+  /* --- AUDIO PLAYER STYLES --- */
+  .audio-player-card {
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 32px;
+    border: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .audio-info { display: flex; gap: 16px; align-items: center; }
+  .audio-icon { font-size: 2.5rem; background: white; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+  .audio-info h3 { margin: 0 0 4px 0; font-size: 1.1rem; color: var(--text); }
+  .audio-status-text { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+  .audio-controls { display: flex; gap: 16px; align-items: center; }
+  .audio-progress-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .audio-time {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .btn-audio-control {
+    padding: 10px 24px;
+    background: var(--text);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    min-width: 100px;
+    transition: background-color 0.2s;
+  }
+  .btn-audio-control.secondary {
+    min-width: 44px;
+    padding: 10px;
+    background: #e2e8f0;
+    color: var(--text);
+  }
+  .btn-audio-control:hover { opacity: 0.9; }
+  .audio-progress-bar { flex: 1; height: 8px; background: #cbd5e1; border-radius: 4px; overflow: hidden; cursor: pointer; }
+  .audio-progress-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.3s ease; }
+
+  .transcript-section { margin-top: 40px; padding-top: 20px; border-top: 2px dashed var(--border); }
+  .btn-secondary { background: white; border: 2px solid var(--border); padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+  .transcript-content.hidden { display: none; }
+  .transcript-content { margin-top: 16px; background: #f8fafc; padding: 20px; border-radius: 8px; }
+  .script-line { margin-bottom: 8px; line-height: 1.5; color: var(--text); }
+
+  /* --- SPEAKING LAYOUT & TIMER --- */
   .speaking-layout {
     display: flex;
     gap: 32px;
     align-items: flex-start;
   }
   
-  /* Sidebar for Timer */
   .timer-column {
-    flex: 0 0 220px; /* Fixed width sidebar */
+    flex: 0 0 220px;
     position: sticky;
-    top: 20px; /* Reduced back since back button is no longer absolute */
+    top: 20px;
   }
   
   .content-column {
     flex: 1;
-    min-width: 0; /* Prevents overflow in flex items */
+    min-width: 0;
   }
   
-  /* Compact Apple-style Timer */
   .apple-timer-container {
     background: white;
     padding: 20px;
@@ -2243,7 +2220,6 @@ const STYLES = `
   }
   .times-up .timer-text-overlay { color: var(--danger); font-weight: 600; }
   
-  /* Time Picker Scroll */
   .time-picker-scroll {
     display: flex;
     flex-wrap: wrap;
@@ -2427,7 +2403,7 @@ const STYLES = `
     margin-top: 32px;
     padding: 32px;
     background: white;
-    border-radius: var(--radius);
+    border-radius: 12px;
     border: 2px solid var(--border);
   }
   .eval-header {
@@ -2450,9 +2426,8 @@ const STYLES = `
   .total-score.average { background: #fef3c7; }
   .total-score.failing { background: #fef2f2; }
   .score-value { font-size: 2rem; font-weight: 700; }
-  .total-score.passing .score-value { color: var(--success); }
-  .total-score.average .score-value { color: var(--warning); }
-  .total-score.failing .score-value { color: var(--danger); }
+  .passing .score-value { color: var(--success); }
+  .failing .score-value { color: var(--danger); }
   .score-max { font-size: 1rem; color: var(--text-muted); }
 
   .eval-categories { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px; }
@@ -2501,12 +2476,6 @@ const STYLES = `
   }
   .advice-list li { color: var(--text); line-height: 1.6; }
 
-  @media (max-width: 960px) {
-    .test-main-content {
-      padding-bottom: 80px; /* Space for fixed sidebar */
-    }
-  }
-
   @media (max-width: 800px) {
     .speaking-layout { flex-direction: column; }
     .timer-column { width: 100%; position: static; margin-bottom: 20px; }
@@ -2526,353 +2495,106 @@ const STYLES = `
   }
 `;
 
+// ============== PAGE INITIALIZATION ==============
+export function initTestPage(host: HTMLElement): void {
+  const styleId = 'olympiad-test-styles';
+  if (!document.getElementById(styleId)) {
+    const styleEl = document.createElement('style');
+    styleEl.id = styleId;
+    styleEl.textContent = STYLES;
+    document.head.appendChild(styleEl);
+  }
+
+  const saved = loadState();
+  const savedEssayTopic = loadSelectedEssayTopic();
+
+  host.innerHTML = `
+    <div class="test-page">
+      <h1>📝 English Olympiad Trainer</h1>
+      <p class="page-subtitle">Practice Reading, Use of English, Listening & Writing at B2-C1 level</p>
+      
+      <div class="controls-card">
+        <div class="controls">
+          <select id="task-type">
+            <option value="reading">📖 Reading Comprehension</option>
+            <option value="use-of-english">🔤 Use of English</option>
+            <option value="listening">🎧 Listening Practice</option>
+            <option value="speaking">💬 Speaking Practice</option>
+            <option value="essay">✍️ Essay Writing</option>
+          </select>
+          <button class="btn-generate" id="generate-btn">Start</button>
+        </div>
+      </div>
+
+      <div id="test-area"></div>
+    </div>
+  `;
+
+  const generateBtn = document.getElementById('generate-btn') as HTMLButtonElement;
+  const taskTypeSelect = document.getElementById('task-type') as HTMLSelectElement;
+  const testArea = document.getElementById('test-area') as HTMLElement;
+
+  // Restore saved test or essay if exists
+  if (saved) {
+    new TestRenderer(saved.task, testArea, saved.answers, saved.listeningPlaybackState);
+    taskTypeSelect.value = saved.task.type;
+  } else if (savedEssayTopic) {
+    taskTypeSelect.value = 'essay';
+    new EssayRenderer(testArea);
+  }
+
+  generateBtn.addEventListener('click', async () => {
+    const taskType = taskTypeSelect.value;
+
+    if (taskType === 'essay') {
+      clearState(); // Clear any non-essay test state before starting essay
+      new EssayRenderer(testArea);
+      return;
+    }
+
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating...';
+    
+    // Custom loading text for listening to manage expectations regarding audio generation
+    const loadingText = taskType === 'listening' 
+      ? 'Generating script and preparing audio playback...' 
+      : 'Creating your personalized test...';
+
+    testArea.innerHTML = `
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <p>${loadingText}</p>
+        <p style="font-size: 14px; opacity: 0.8;">This may take a bit of time....</p>
+      </div>
+    `;
+
+    try {
+      // @ts-ignore - TypeScript might complain about string vs literal type mismatch from select value
+      const task = await generateTask(taskType);
+      clearSelectedEssayTopic(); // Clear essay topic if generating a test
+      saveState(task, {}); // Save the new task with empty answers and no specific audio state
+      new TestRenderer(task, testArea);
+    } catch (error) {
+      console.error('Error generating task:', error);
+      testArea.innerHTML = `<div class="error">❌ ${error instanceof Error ? error.message : 'Failed to generate test. Please try again.'}</div>`;
+    } finally {
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Start';
+    }
+  });
+}
+
 // ============== REACT COMPONENT ==============
-
-const ADJECTIVES = ['Quantum', 'Phoenix', 'Odyssey', 'Celestial', 'Apex', 'Vortex', 'Starlight', 'Galactic', 'Ethereal', 'Crimson'];
-const NOUNS = ['Challenge', 'Quest', 'Voyage', 'Endeavor', 'Matrix', 'Nexus', 'Paradigm', 'Ascent', 'Legacy', 'Chronicle'];
-function generateThemedName(): string {
-    const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-    const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-    return `${adj} ${noun}`;
-}
-
-const styleId = 'olympiad-test-styles';
-const injectStyles = () => {
-    if (!document.getElementById(styleId)) {
-        const styleEl = document.createElement('style');
-        styleEl.id = styleId;
-        styleEl.textContent = STYLES;
-        document.head.appendChild(styleEl);
-    }
-};
-
-function GenerateTestView({ onGenerate, isLoading }: { onGenerate: (type: any) => void, isLoading: boolean }) {
-    const [taskType, setTaskType] = useState('reading');
-    return (
-        <div className="controls-card" style={{marginBottom: '32px'}}>
-            <div className="controls">
-                <select className="topic-dropdown" value={taskType} onChange={e => setTaskType(e.target.value)} disabled={isLoading}>
-                    <option value="reading">📖 Reading Comprehension</option>
-                    <option value="use-of-english">🔤 Use of English</option>
-                    <option value="speaking">💬 Speaking Practice</option>
-                </select>
-                <button className="btn-generate" onClick={() => onGenerate(taskType)} disabled={isLoading}>
-                    {isLoading ? 'Generating...' : 'Generate & Save Test'}
-                </button>
-            </div>
-        </div>
-    );
-}
-
-function TestsListView({ onStart, tests, loading }: { onStart: (test: PracticeTest) => void, tests: PracticeTest[], loading: boolean }) {
-    if (loading) return <div>Loading tests...</div>;
-    if (tests.length === 0) return <div>No tests available at the moment.</div>;
-
-    return (
-        <div>
-            {tests.map(test => (
-                <div key={test.id} className="practice-test-item">
-                    <h4>{test.name}</h4>
-                    <p>{test.description}</p>
-                    <button className="btn-generate" onClick={() => onStart(test)}>Start This Test</button>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function EssayView({ onStart }: { onStart: () => void }) {
-    return (
-        <div>
-            <p style={{textAlign: 'center', marginBottom: '24px', color: 'var(--text-muted)'}}>Ready to practice your writing skills? Choose a topic or generate a new one on the next screen.</p>
-            <button className="btn-generate" style={{width: '100%'}} onClick={onStart}>Start Essay Writing</button>
-        </div>
-    );
-}
-
-function ResultsView() {
-    const { user } = useAuth();
-    const [results, setResults] = useState<TestResult[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (user) {
-            getUserResults(user.id).then(data => {
-                setResults(data);
-                setLoading(false);
-            });
-        }
-    }, [user]);
-
-    if (loading) return <div>Loading your results...</div>;
-    if (results.length === 0) return <div>You have no test results yet. Take a test to see your progress!</div>;
-    
-    return (
-        <div className="results-history">
-            {results.map((result, index) => (
-                <div key={index} className={`result-card ${result.passed ? 'passed' : 'failed'}`}>
-                    <h4>{result.test_name}</h4>
-                    <p><strong>Score: {result.score} / {result.total_questions} ({Math.round(result.score/result.total_questions * 100)}%)</strong></p>
-                    <p>Date: {new Date(result.test_date).toLocaleString()}</p>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function MainMenu({ onGenerate, onStartEssay, onStartRegularTest, isLoading, regularTests, userGeneratedTests, isLoadingTests }: any) {
-    const [activeTab, setActiveTab] = useState('regular');
-    
-    return (
-      <div className="main-menu-card">
-        <div className="menu-tabs">
-          <button className={activeTab === 'regular' ? 'active' : ''} onClick={() => setActiveTab('regular')}>All Tests</button>
-          <button className={activeTab === 'generate' ? 'active' : ''} onClick={() => setActiveTab('generate')}>Generate Test</button>
-          <button className={activeTab === 'essay' ? 'active' : ''} onClick={() => setActiveTab('essay')}>Essay Writing</button>
-          <button className={activeTab === 'results' ? 'active' : ''} onClick={() => setActiveTab('results')}>My Results</button>
-        </div>
-        <div className="menu-content">
-          {activeTab === 'regular' && <TestsListView onStart={onStartRegularTest} tests={regularTests} loading={isLoadingTests} />}
-          {activeTab === 'generate' && 
-            <div>
-              <GenerateTestView onGenerate={onGenerate} isLoading={isLoading} />
-              <h3 style={{ marginTop: '32px', borderTop: '2px solid var(--border)', paddingTop: '24px', marginBottom: '16px' }}>My Generated Tests</h3>
-              <TestsListView onStart={onStartRegularTest} tests={userGeneratedTests} loading={isLoadingTests} />
-            </div>
-          }
-          {activeTab === 'essay' && <EssayView onStart={onStartEssay} />}
-          {activeTab === 'results' && <ResultsView />}
-        </div>
-      </div>
-    );
-}
-
 export default function GeneratedTestPage() {
-    const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
-    const testAreaRef = useRef<HTMLDivElement>(null);
-  
-    const [activeView, setActiveView] = useState<'menu' | 'test' | 'essay'>('menu');
-    const [activeTask, setActiveTask] = useState<Task | null>(null);
-    const [activePracticeTest, setActivePracticeTest] = useState<PracticeTest | null>(null);
-    const [savedState, setSavedState] = useState<SavedTestState | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [allTests, setAllTests] = useState<PracticeTest[]>([]);
-    const [isLoadingTests, setIsLoadingTests] = useState(true);
+  const hostRef = useRef<HTMLDivElement>(null);
 
-    const fetchAllTests = () => {
-        setIsLoadingTests(true);
-        getPracticeTests().then(data => {
-            setAllTests(data);
-            setIsLoadingTests(false);
-        });
+  useEffect(() => {
+    if (!hostRef.current) return;
+    initTestPage(hostRef.current);
+    return () => {
+      if (hostRef.current) hostRef.current.innerHTML = '';
     };
-  
-    useEffect(() => {
-      injectStyles();
-      fetchAllTests();
-      
-      if (!user) return;
-      
-      // Restore active view
-      const savedView = loadActiveView();
-      
-      if (savedView === 'test') {
-        const saved = loadState();
-        if (saved) {
-          setActiveTask(saved.task);
-          setActivePracticeTest(saved.practiceTest);
-          setSavedState(saved);
-          setActiveView('test');
-        } else {
-          // No saved test state, go to menu
-          clearActiveView();
-          setActiveView('menu');
-        }
-      } else if (savedView === 'essay') {
-        // Restore essay view
-        setActiveView('essay');
-      } else {
-        setActiveView('menu');
-      }
-    }, [user]);
+  }, []);
 
-    // Handle browser back button / swipe gesture
-    useEffect(() => {
-      const handlePopState = () => {
-        if (activeView !== 'menu') {
-          // Don't clear state on mobile back - let them continue later
-          clearActiveView();
-          setActiveView('menu');
-          setActiveTask(null);
-          setActivePracticeTest(null);
-        }
-      };
-
-      // Push state when entering test/essay view
-      if (activeView !== 'menu') {
-        window.history.pushState({ view: activeView }, '');
-      }
-
-      window.addEventListener('popstate', handlePopState);
-      return () => window.removeEventListener('popstate', handlePopState);
-    }, [activeView]);
-  
-    useEffect(() => {
-      if (activeView === 'test' && activeTask && testAreaRef.current && user) {
-        testAreaRef.current.innerHTML = '';
-        const timeLimit = activePracticeTest?.time_limit_minutes || (activeTask.type === 'reading' ? 60 : 40);
-        new TestRenderer(activeTask, testAreaRef.current, user, timeLimit, activePracticeTest, savedState);
-        setSavedState(null);
-      }
-    }, [activeView, activeTask, user, activePracticeTest, savedState]);
-  
-    useEffect(() => {
-      if (activeView === 'essay' && testAreaRef.current && user) {
-        testAreaRef.current.innerHTML = '';
-        new EssayRenderer(testAreaRef.current, user);
-      }
-    }, [activeView, user]);
-  
-    const handleGenerateTask = async (taskType: 'reading' | 'use-of-english' | 'speaking' | 'essay') => {
-      if (!user) return;
-      setIsLoading(true);
-      setError('');
-      
-      try {
-        const SECRET_KEYPHRASE = `[user_generated:${user.id}]`;
-        const themedName = generateThemedName();
-        let name, description, time_limit_minutes, content;
-        
-        if (taskType === 'essay') {
-            const topic = await generateEssayTopic();
-            content = topic;
-            name = themedName;
-            description = `An advanced essay writing challenge. ${SECRET_KEYPHRASE}`;
-            time_limit_minutes = 45;
-        } else {
-            const task = await generateTask(taskType);
-            content = task;
-            name = themedName;
-
-            if (task.type === 'speaking') {
-                description = `A challenging speaking practice task. ${SECRET_KEYPHRASE}`;
-                time_limit_minutes = 10;
-            } else {
-                description = `A challenging ${taskType.replace('-', ' ')} practice test. ${SECRET_KEYPHRASE}`;
-                time_limit_minutes = taskType === 'reading' ? 60 : 40;
-            }
-        }
-
-        const newTest: Partial<PracticeTest> = {
-            name,
-            description,
-            time_limit_minutes,
-            content,
-            is_published: true,
-            who_completed: []
-        };
-        
-        await saveGeneratedTest(newTest);
-        fetchAllTests();
-        
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to generate test.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    const handleStartRegularTest = (test: PracticeTest) => {
-        clearState();
-        const contentIsEssayTopic = 'prompt' in test.content;
-
-        if (contentIsEssayTopic) {
-            saveSelectedEssayTopic(test.content as EssayTopic);
-            saveActiveView('essay');
-            setActiveView('essay');
-            setActiveTask(null);
-        } else {
-            setActivePracticeTest(test);
-            setActiveTask(test.content as Task);
-            setActiveView('test');
-            saveActiveView('test');
-            saveState({ task: test.content as Task, answers: {}, remainingTime: test.time_limit_minutes * 60, practiceTest: test });
-        }
-    };
-  
-    const handleStartEssay = () => {
-      clearState();
-      clearSelectedEssayTopic();
-      saveActiveView('essay');
-      setActiveView('essay');
-      setActiveTask(null);
-    };
-  
-    const handleBackToMenu = () => {
-      if (activeView === 'test') {
-        if (!confirm('Are you sure you want to exit? Your progress is saved and you can resume later.')) {
-            return;
-        }
-        // Keep the state saved so user can continue later
-        // clearState(); // Removed - keep state for resuming
-      }
-      clearActiveView();
-      setActiveView('menu');
-      setActiveTask(null);
-      setActivePracticeTest(null);
-      if (testAreaRef.current) testAreaRef.current.innerHTML = '';
-      
-      // Go back in history if we pushed a state
-      if (window.history.state?.view) {
-        window.history.back();
-      }
-    };
-  
-    if (isAuthLoading) {
-      return <div className="test-page"><div className="loading"><div className="loading-spinner"></div></div></div>;
-    }
-    
-    if (!isAuthenticated) {
-      return (
-        <div className="test-page">
-          <h1 style={{color: 'white', textAlign: 'center'}}>EnglishProfTest</h1>
-          <div className="error" style={{ maxWidth: '600px', margin: '32px auto', background: 'white' }}>
-            Please log in to access the trainer.
-          </div>
-        </div>
-      );
-    }
-  
-    const SECRET_KEYPHRASE_BASE = `[user_generated:`;
-    const regularTests = allTests.filter(test => !test.description.includes(SECRET_KEYPHRASE_BASE));
-    const userGeneratedTests = user ? allTests.filter(test => test.description.includes(`${SECRET_KEYPHRASE_BASE}${user.id}]`)) : [];
-
-    return (
-      <div className="test-page">
-        {activeView === 'menu' ? (
-          <>
-            <h1>EnglishProfTest</h1>
-            <p className="page-subtitle">Welcome, {user?.first_name || user?.email}!</p>
-            <MainMenu 
-              onGenerate={handleGenerateTask} 
-              onStartEssay={handleStartEssay}
-              onStartRegularTest={handleStartRegularTest}
-              isLoading={isLoading}
-              regularTests={regularTests}
-              userGeneratedTests={userGeneratedTests}
-              isLoadingTests={isLoadingTests}
-            />
-          </>
-        ) : (
-          <div>
-            <div className="back-button-container">
-              <button onClick={handleBackToMenu} className="btn-back-to-menu">← Back to Menu</button>
-            </div>
-            <div ref={testAreaRef}></div>
-          </div>
-        )}
-        {error && <div className="error" style={{ maxWidth: '900px', margin: '20px auto', background: 'white' }}>{error}</div>}
-      </div>
-    );
+  return <div ref={hostRef} />;
 }

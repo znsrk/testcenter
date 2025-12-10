@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom' // Added import
 import { useAuth } from '../contexts/AuthContext'
 import { login } from '../lib/auth'
 
@@ -11,23 +12,38 @@ export function LoginPage({ onShowSignup }: LoginPageProps) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const { login: setAuthUser } = useAuth()
+  
+  // Destructure 'user' to check if we are already logged in
+  const { login: setAuthUser, user } = useAuth() 
+  const navigate = useNavigate() // Initialize navigation
+
+  // 1. Auto-redirect: If user is already logged in, go straight to /test
+  useEffect(() => {
+    if (user) {
+      navigate('/test', { replace: true })
+    }
+  }, [user, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
-    const { user, error: authError } = await login(email, password)
+    const { user: authUser, error: authError } = await login(email, password)
 
     if (authError) {
       setError(authError.message)
       setLoading(false)
-    } else if (user) {
-      setAuthUser(user)
-      // AuthContext will update, App will show HomePage
+    } else if (authUser) {
+      setAuthUser(authUser)
+      // 2. Manual redirect: Go to /test after successful login action
+      navigate('/test', { replace: true })
     }
   }
+
+  // If the user is logged in, we render nothing (or a loader) while redirecting
+  // to prevent a "flash" of the login form content.
+  if (user) return null; 
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-200 p-4">
