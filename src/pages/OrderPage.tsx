@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, Mic, MicOff, Loader2, Trash2 } from 'lucide-react';
 
 // --- CONFIGURATION ---
