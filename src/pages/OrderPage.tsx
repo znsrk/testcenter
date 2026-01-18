@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Mic, MicOff, Loader2, Trash2, ChevronRight, Languages, Info, UtensilsCrossed, CheckCircle2, ReceiptText } from 'lucide-react';
+import { ShoppingBag, Mic, MicOff, Loader2, Trash2, ChevronRight, UtensilsCrossed, CheckCircle2, ReceiptText } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'YOUR_GOOGLE_GEMINI_KEY'; 
