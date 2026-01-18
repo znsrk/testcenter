@@ -9,6 +9,7 @@ import { GradeCalculator } from './components/calc'
 import TestsPage from './admin/TestsPage'
 import TestPage from './pages/TestPage'
 import GeneratedTestPage from './pages/test'
+import OrderPage from './pages/OrderPage'
 
 function AppContent() {
   const [showSignup, setShowSignup] = useState(false)
@@ -17,6 +18,9 @@ function AppContent() {
   return (
     <div className="size-full">
       <Routes>
+        {/* NEW: The Order Page Route */}
+        <Route path="/order" element={<OrderPage />} />
+        
         <Route path="/" element={
           isAuthenticated ? (
             // If logged in, redirect immediately to /test
