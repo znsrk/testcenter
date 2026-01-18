@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Mic, MicOff, Loader2, Trash2, ChevronRight, Languages, Info, UtensilsCrossed } from 'lucide-react';
+import { ShoppingBag, Mic, MicOff, Loader2, Trash2, ChevronRight, Languages, Info, UtensilsCrossed, CheckCircle2, ReceiptText } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'YOUR_GOOGLE_GEMINI_KEY'; 
@@ -19,133 +19,62 @@ interface OrderItem extends MenuItem {
   instanceId: number;
 }
 
+interface ReceiptData {
+    orderId: string;
+    items: OrderItem[];
+    total: number;
+    timestamp: string;
+}
+
 const MENU: MenuItem[] = [
-  // BREAKFAST (1-15)
-  { id: 1, name: "Two Fried Eggs", price: 6.50, category: "Breakfast", image: "🍳", desc: "Two eggs cooked in a pan, served with toast." },
-  { id: 2, name: "Pancakes with Syrup", price: 8.99, category: "Breakfast", image: "🥞", desc: "Three sweet pancakes with maple syrup and butter." },
-  { id: 3, name: "Fruit and Yogurt", price: 5.50, category: "Breakfast", image: "🥣", desc: "Fresh yogurt with seasonal berries and honey." },
-  { id: 4, name: "Breakfast Burrito", price: 9.50, category: "Breakfast", image: "🌯", desc: "Flour tortilla with eggs, cheese, and beans." },
-  { id: 5, name: "Oatmeal with Nuts", price: 4.99, category: "Breakfast", image: "🥣", desc: "Warm oats served with almonds and brown sugar." },
-  { id: 6, name: "French Toast", price: 7.99, category: "Breakfast", image: "🍞", desc: "Bread dipped in egg and cinnamon, then fried." },
-  { id: 7, name: "Cheese Omelette", price: 8.50, category: "Breakfast", image: "🥚", desc: "Fluffy eggs filled with melted cheddar cheese." },
-  { id: 8, name: "Bacon and Egg Roll", price: 6.00, category: "Breakfast", image: "🥯", desc: "Crispy bacon and a fried egg in a soft bread roll." },
-  { id: 9, name: "Avocado Toast", price: 10.50, category: "Breakfast", image: "🥑", desc: "Smashed avocado on toasted sourdough bread." },
-  { id: 10, name: "Belgian Waffles", price: 9.00, category: "Breakfast", image: "🧇", desc: "Crispy waffles topped with whipped cream." },
-  { id: 11, name: "Smoked Salmon Bagel", price: 12.99, category: "Breakfast", image: "🥯", desc: "Cream cheese and salmon on a toasted bagel." },
-  { id: 12, name: "Mushroom Toast", price: 7.50, category: "Breakfast", image: "🍄", desc: "Fried mushrooms on toast with garlic butter." },
-  { id: 13, name: "Fruit Salad Bowl", price: 6.50, category: "Breakfast", image: "🍍", desc: "A mix of melon, pineapple, and grapes." },
-  { id: 14, name: "Poached Eggs", price: 7.00, category: "Breakfast", image: "🥚", desc: "Two eggs cooked in water, served on toast." },
-  { id: 15, name: "English Muffin", price: 3.99, category: "Breakfast", image: "🧁", desc: "Toasted muffin served with jam and butter." },
+  // MAIN MEALS
+  { id: 1, name: "Vegetable Soup", price: 5.35, category: "Mains", image: "🥣", desc: "Healthy and warm blended vegetable soup." },
+  { id: 2, name: "Noodles with Bean Sprouts", price: 4.20, category: "Mains", image: "🍜", desc: "Stir-fried noodles mixed with fresh bean sprouts." },
+  { id: 3, name: "Chicken Tikka Masala", price: 5.30, category: "Mains", image: "🥘", desc: "Creamy spiced chicken curry served in a rich sauce." },
+  { id: 4, name: "Crispy Duck Pancakes", price: 6.40, category: "Mains", image: "🌯", desc: "Shredded crispy duck served with thin pancakes." },
+  { id: 5, name: "Chicken with Boiled Rice", price: 5.30, category: "Mains", image: "🍛", desc: "Tender chicken pieces served over steamed white rice." },
+  { id: 6, name: "Kebab (lamb in pitta bread)", price: 4.20, category: "Mains", image: "🥙", desc: "Seasoned lamb served inside a soft pitta bread." },
 
-  // STARTERS (16-35)
-  { id: 16, name: "Tomato Soup", price: 5.99, category: "Starters", image: "🥣", desc: "Classic creamy tomato soup with fresh basil." },
-  { id: 17, name: "Garlic Bread", price: 4.50, category: "Starters", image: "🥖", desc: "Toasted bread with garlic, herbs, and butter." },
-  { id: 18, name: "Onion Rings", price: 5.00, category: "Starters", image: "🧅", desc: "Crispy fried onions served with a spicy dip." },
-  { id: 19, name: "Chicken Wings", price: 8.99, category: "Starters", image: "🍗", desc: "Spicy chicken wings served with blue cheese sauce." },
-  { id: 20, name: "Vegetable Samosas", price: 5.50, category: "Starters", image: "🥟", desc: "Fried pastry filled with spicy potatoes and peas." },
-  { id: 21, name: "Prawn Cocktail", price: 9.50, category: "Starters", image: "🍤", desc: "Cold prawns served with a creamy pink sauce." },
-  { id: 22, name: "Fried Calamari", price: 10.99, category: "Starters", image: "🦑", desc: "Crispy squid rings with a lemon slice." },
-  { id: 23, name: "Hummus and Pita", price: 6.50, category: "Starters", image: "🥙", desc: "Chickpea dip served with warm flatbread." },
-  { id: 24, name: "Spring Rolls", price: 6.00, category: "Starters", image: "🌯", desc: "Crunchy rolls filled with fresh vegetables." },
-  { id: 25, name: "Mozzarella Sticks", price: 7.50, category: "Starters", image: "🧀", desc: "Fried cheese sticks served with tomato sauce." },
-  { id: 26, name: "Bruschetta", price: 7.00, category: "Starters", image: "🍅", desc: "Toasted bread topped with tomatoes and olive oil." },
-  { id: 27, name: "Potato Skins", price: 7.99, category: "Starters", image: "🥔", desc: "Baked potato halves filled with cheese and bacon." },
-  { id: 28, name: "Stuffed Mushrooms", price: 8.50, category: "Starters", image: "🍄", desc: "Mushrooms filled with herbs and breadcrumbs." },
-  { id: 29, name: "Nachos", price: 9.99, category: "Starters", image: "🌮", desc: "Tortilla chips with melted cheese and jalapeños." },
-  { id: 30, name: "Chicken Skewers", price: 8.00, category: "Starters", image: "🍢", desc: "Grilled chicken pieces with a peanut sauce." },
-  { id: 31, name: "French Onion Soup", price: 6.99, category: "Starters", image: "🥣", desc: "Rich onion soup topped with melted cheese." },
-  { id: 32, name: "Greek Salad", price: 7.50, category: "Starters", image: "🥗", desc: "Cucumber, tomato, olives, and feta cheese." },
-  { id: 33, name: "Caprese Salad", price: 8.50, category: "Starters", image: "🍅", desc: "Fresh mozzarella, tomatoes, and balsamic glaze." },
-  { id: 34, name: "Mini Tacos", price: 9.00, category: "Starters", image: "🌮", desc: "Three small tacos with beef and salsa." },
-  { id: 35, name: "Spinach Dip", price: 7.50, category: "Starters", image: "🥘", desc: "Warm cheese and spinach dip with crackers." },
+  // SIDE DISHES
+  { id: 7, name: "Chicken Salad", price: 6.50, category: "Side Dishes", image: "🥗", desc: "Fresh mixed greens topped with grilled chicken." },
+  { id: 8, name: "Spring Rolls", price: 2.05, category: "Side Dishes", image: "🥢", desc: "Crispy fried rolls filled with vegetables." },
 
-  // MAINS (36-75)
-  { id: 36, name: "Beef Burger", price: 12.99, category: "Mains", image: "🍔", desc: "Juicy beef patty with lettuce and tomato." },
-  { id: 37, name: "Cheeseburger", price: 13.50, category: "Mains", image: "🧀", desc: "Our classic beef burger with extra cheddar cheese." },
-  { id: 38, name: "Margherita Pizza", price: 11.00, category: "Mains", image: "🍕", desc: "Pizza with tomato sauce, mozzarella, and basil." },
-  { id: 39, name: "Pepperoni Pizza", price: 12.50, category: "Mains", image: "🍕", desc: "Pizza topped with spicy pepperoni slices." },
-  { id: 40, name: "Spaghetti Bolognese", price: 14.00, category: "Mains", image: "🍝", desc: "Pasta served with a rich meat and tomato sauce." },
-  { id: 41, name: "Chicken Stir-Fry", price: 13.99, category: "Mains", image: "🍲", desc: "Chicken and vegetables cooked quickly in a pan." },
-  { id: 42, name: "Fish and Chips", price: 15.50, category: "Mains", image: "🐟", desc: "Fried fish in batter served with thick fries." },
-  { id: 43, name: "Grilled Steak", price: 22.00, category: "Mains", image: "🥩", desc: "Beef steak served with roasted potatoes." },
-  { id: 44, name: "Vegetable Lasagna", price: 13.50, category: "Mains", image: "🥘", desc: "Layers of pasta with vegetables and white sauce." },
-  { id: 45, name: "Lamb Curry", price: 16.50, category: "Mains", image: "🍛", desc: "Tender lamb cooked in a spicy curry sauce." },
-  { id: 46, name: "Roast Chicken", price: 14.99, category: "Mains", image: "🍗", desc: "Chicken cooked in the oven with herbs." },
-  { id: 47, name: "BBQ Pork Ribs", price: 18.00, category: "Mains", image: "🍖", desc: "Slow-cooked ribs with sweet barbecue sauce." },
-  { id: 48, name: "Shrimp Scampi", price: 17.50, category: "Mains", image: "🍝", desc: "Pasta with prawns, garlic, and lemon juice." },
-  { id: 49, name: "Mushroom Risotto", price: 13.00, category: "Mains", image: "🍚", desc: "Creamy rice cooked with fresh mushrooms." },
-  { id: 50, name: "Turkey Sandwich", price: 10.50, category: "Mains", image: "🥪", desc: "Sliced turkey, lettuce, and mayo on brown bread." },
-  { id: 51, name: "Veget veggie Wrap", price: 9.99, category: "Mains", image: "🌯", desc: "Tortilla filled with grilled veggies and hummus." },
-  { id: 52, name: "Fried Rice", price: 11.50, category: "Mains", image: "🥡", desc: "Rice fried with eggs, peas, and carrots." },
-  { id: 53, name: "Beef Stew", price: 15.00, category: "Mains", image: "🥘", desc: "A warm bowl of beef, carrots, and potatoes." },
-  { id: 54, name: "Baked Cod", price: 16.99, category: "Mains", image: "🐟", desc: "White fish baked with lemon and butter." },
-  { id: 55, name: "Tuna Salad Sandwich", price: 9.50, category: "Mains", image: "🥪", desc: "Tuna and mayo mix on a soft baguette." },
-  { id: 56, name: "Chicken Parmesan", price: 15.50, category: "Mains", image: "🍝", desc: "Fried chicken with tomato sauce and cheese." },
-  { id: 57, name: "Pork Chop", price: 14.50, category: "Mains", image: "🥩", desc: "Grilled pork meat served with apple sauce." },
-  { id: 58, name: "Lentil Soup", price: 10.00, category: "Mains", image: "🥣", desc: "Healthy soup made with brown lentils and spices." },
-  { id: 59, name: "Fettuccine Alfredo", price: 13.50, category: "Mains", image: "🍝", desc: "Pasta in a very creamy white cheese sauce." },
-  { id: 60, name: "Chicken Burrito", price: 11.99, category: "Mains", image: "🌯", desc: "Large tortilla with chicken, rice, and salsa." },
-  { id: 61, name: "Shepherd's Pie", price: 14.00, category: "Mains", image: "🥧", desc: "Minced meat and vegetables topped with mashed potato." },
-  { id: 62, name: "Pad Thai", price: 13.00, category: "Mains", image: "🍜", desc: "Rice noodles with peanuts, sprouts, and lime." },
-  { id: 63, name: "Falafel Plate", price: 11.00, category: "Mains", image: "🧆", desc: "Fried chickpea balls served with salad and rice." },
-  { id: 64, name: "Cottage Pie", price: 14.00, category: "Mains", image: "🥧", desc: "Beef mince topped with golden mashed potatoes." },
-  { id: 65, name: "Lobster Roll", price: 24.00, category: "Mains", image: "🦞", desc: "Fresh lobster meat in a buttery bread roll." },
-  { id: 66, name: "Chicken Caesar Wrap", price: 10.99, category: "Mains", image: "🌯", desc: "Grilled chicken, romaine, and dressing in a wrap." },
-  { id: 67, name: "Veggie Burger", price: 12.50, category: "Mains", image: "🍔", desc: "A plant-based patty with fresh vegetables." },
-  { id: 68, name: "Beef Tacos", price: 11.50, category: "Mains", image: "🌮", desc: "Three crunchy tacos with beef and cheese." },
-  { id: 69, name: "Grilled Salmon", price: 18.99, category: "Mains", image: "🐟", desc: "Pink salmon fillet served with asparagus." },
-  { id: 70, name: "Spicy Ramen", price: 12.99, category: "Mains", image: "🍜", desc: "Noodle soup with a hot and spicy broth." },
-  { id: 71, name: "Meatball Sub", price: 11.00, category: "Mains", image: "🥖", desc: "Large bread roll filled with meatballs and sauce." },
-  { id: 72, name: "Eggplant Parmesan", price: 13.50, category: "Mains", image: "🍆", desc: "Slices of eggplant baked with cheese and tomato." },
-  { id: 73, name: "Quiche Lorraine", price: 10.50, category: "Mains", image: "🥧", desc: "Savory tart with eggs, cheese, and bacon." },
-  { id: 74, name: "Teriyaki Chicken", price: 14.00, category: "Mains", image: "🍱", desc: "Chicken glazed in a sweet soy sauce." },
-  { id: 75, name: "Bangers and Mash", price: 13.00, category: "Mains", image: "🌭", desc: "English sausages served with mashed potato." },
+  // DESSERTS
+  { id: 9, name: "Ice Cream", price: 2.50, category: "Desserts", image: "🍦", desc: "Creamy frozen dessert in a tub." },
+  { id: 10, name: "Fruit Salad", price: 3.00, category: "Desserts", image: "🥣", desc: "A selection of fresh, seasonal chopped fruits." },
 
-  // SIDES (76-85)
-  { id: 76, name: "French Fries", price: 3.99, category: "Sides", image: "🍟", desc: "Crispy fried potato strips with salt." },
-  { id: 77, name: "Mashed Potatoes", price: 4.50, category: "Sides", image: "🥔", desc: "Creamy boiled potatoes with butter and milk." },
-  { id: 78, name: "Steamed Broccoli", price: 4.00, category: "Sides", image: "🥦", desc: "Fresh green broccoli cooked with steam." },
-  { id: 79, name: "White Rice", price: 3.00, category: "Sides", image: "🍚", desc: "A bowl of simple steamed white rice." },
-  { id: 80, name: "Coleslaw", price: 3.50, category: "Sides", image: "🥗", desc: "Cabbage and carrot salad with mayo." },
-  { id: 81, name: "Garden Salad", price: 4.99, category: "Sides", image: "🥬", desc: "A small bowl of lettuce, tomato, and cucumber." },
-  { id: 82, name: "Corn on the Cob", price: 3.50, category: "Sides", image: "🌽", desc: "Boiled sweet corn served with butter." },
-  { id: 83, name: "Roasted Carrots", price: 4.50, category: "Sides", image: "🥕", desc: "Carrots baked in the oven with honey." },
-  { id: 84, name: "Baked Beans", price: 3.00, category: "Sides", image: "🫘", desc: "Warm beans in a sweet tomato sauce." },
-  { id: 85, name: "Garlic Spinach", price: 4.50, category: "Sides", image: "🍃", desc: "Spinach leaves cooked with fresh garlic." },
-
-  // DESSERTS (86-95)
-  { id: 86, name: "Chocolate Cake", price: 6.50, category: "Desserts", image: "🍰", desc: "Rich and moist dark chocolate layer cake." },
-  { id: 87, name: "Apple Pie", price: 5.99, category: "Desserts", image: "🥧", desc: "Sweet apples in a crispy pastry crust." },
-  { id: 88, name: "Vanilla Ice Cream", price: 4.00, category: "Desserts", image: "🍨", desc: "Two scoops of classic vanilla bean ice cream." },
-  { id: 89, name: "Cheesecake", price: 6.99, category: "Desserts", image: "🍰", desc: "Creamy cheese dessert on a biscuit base." },
-  { id: 90, name: "Fruit Tart", price: 5.50, category: "Desserts", image: "🥧", desc: "A small pastry filled with cream and fruit." },
-  { id: 91, name: "Chocolate Brownie", price: 4.50, category: "Desserts", image: "🍪", desc: "A soft, square chocolate cake with nuts." },
-  { id: 92, name: "Lemon Sorbet", price: 4.50, category: "Desserts", image: "🍧", desc: "A refreshing frozen dessert made with lemon." },
-  { id: 93, name: "Rice Pudding", price: 4.00, category: "Desserts", image: "🥣", desc: "Warm rice cooked with milk, sugar, and cinnamon." },
-  { id: 94, name: "Tiramisu", price: 7.50, category: "Desserts", image: "☕", desc: "Italian dessert with coffee and mascarpone." },
-  { id: 95, name: "Blueberry Muffin", price: 3.50, category: "Desserts", image: "🧁", desc: "Sweet bread with fresh blueberries inside." },
-
-  // DRINKS (96-100)
-  { id: 96, name: "Hot Coffee", price: 3.00, category: "Drinks", image: "☕", desc: "Freshly brewed black coffee or with milk." },
-  { id: 97, name: "Iced Tea", price: 3.50, category: "Drinks", image: "🍹", desc: "Cold black tea with lemon and ice cubes." },
-  { id: 98, name: "Orange Juice", price: 4.00, category: "Drinks", image: "🍊", desc: "Freshly squeezed juice from sweet oranges." },
-  { id: 99, name: "Sparkling Water", price: 2.50, category: "Drinks", image: "🫧", desc: "Water with bubbles and a slice of lime." },
-  { id: 100, name: "Hot Chocolate", price: 4.50, category: "Drinks", image: "☕", desc: "Milk and cocoa topped with marshmallows." }
+  // DRINKS
+  { id: 11, name: "Cola", price: 1.00, category: "Drinks", image: "🥤", desc: "Refreshing carbonated cola drink." },
+  { id: 12, name: "Mineral Water (still)", price: 2.50, category: "Drinks", image: "💧", desc: "Still mineral water in a bottle." }
 ];
 
-const CATEGORIES = ["Breakfast", "Starters", "Mains", "Sides", "Desserts", "Drinks"];
+const CATEGORIES = ["All", "Breakfast", "Starters", "Mains", "Desserts", "Drinks"]; // Added "All" category
 
 export default function OrderPage() {
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [activeCategory, setActiveCategory] = useState("Mains");
+  const [activeCategory, setActiveCategory] = useState("All"); // Changed initial active category to "All"
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [aiMessage, setAiMessage] = useState("Hi! Tap the mic to order.");
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
+  const [isReceiptVisible, setIsReceiptVisible] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-hide receipt after 5 seconds
+  useEffect(() => {
+    if (isReceiptVisible) {
+      const timer = setTimeout(() => {
+        setIsReceiptVisible(false);
+        // Fully clear receipt data after animation
+        setTimeout(() => setReceipt(null), 500);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isReceiptVisible]);
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -161,30 +90,22 @@ export default function OrderPage() {
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         let interimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
+          if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+          else interimTranscript += event.results[i][0].transcript;
         }
+
         silenceTimerRef.current = setTimeout(() => {
-          if (finalTranscript || interimTranscript) {
-            const fullText = (finalTranscript + interimTranscript).trim();
-            if (fullText) processOrderWithAI(fullText);
-            recognitionRef.current?.stop();
+          const fullText = (finalTranscript + interimTranscript).trim();
+          if (fullText) {
+            processOrderWithAI(fullText);
+            try { recognitionRef.current?.stop(); } catch(e) {}
           }
-        }, 1300);
+        }, 1500);
       };
 
-      recognitionRef.current.onerror = (event: any) => {
-        setIsListening(false);
-        setAiMessage("I didn't catch that. Please try again.");
-      };
-      
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-        finalTranscript = '';
-      };
+      recognitionRef.current.onerror = () => setIsListening(false);
+      recognitionRef.current.onstart = () => setIsListening(true);
+      recognitionRef.current.onend = () => { setIsListening(false); finalTranscript = ''; };
     }
   }, []);
 
@@ -192,124 +113,142 @@ export default function OrderPage() {
     if (isPlayingAudio || isProcessing) return;
     if (isListening) {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      recognitionRef.current?.stop();
+      try { recognitionRef.current?.stop(); } catch(e) {}
     } else {
-      setIsListening(true);
-      recognitionRef.current?.start();
       setAiMessage("Listening...");
+      try { recognitionRef.current?.start(); } catch(e) { setIsListening(true); }
     }
   };
 
   const processOrderWithAI = async (userText: string) => {
+    if (isProcessing) return;
     setIsProcessing(true);
     setAiMessage("Thinking...");
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GOOGLE_GEMINI_KEY') {
-      setAiMessage("Error: API Key missing.");
-      setIsProcessing(false);
-      return;
-    }
+    
     try {
-      const prompt = `
-        You are a cashier. Menu: ${JSON.stringify(MENU.map(m => ({ id: m.id, name: m.name })))}.
-        User said: "${userText}".
-        Identify items. If user asks for something not on menu, ignore it or apologize in voice_response. Choose items simply, if a user asks for X, give X only.
-        Return strictly JSON.
-        Format: { "add_item_ids": [ids], "voice_response": "text" }
-      `;
+      const prompt = `You are a cashier. Menu: ${JSON.stringify(MENU.map(m => ({ id: m.id, name: m.name })))}. User: "${userText}". Identify item IDs. Format JSON: { "add_item_ids": [ids], "voice_response": "short text" }`;
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { response_mime_type: "application/json" }
-        })
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { response_mime_type: "application/json" } })
       });
-      const data = await response.json();
-      const rawText = data.candidates[0].content.parts[0].text;
-      const result = JSON.parse(rawText);
 
-      if (result.add_item_ids && Array.isArray(result.add_item_ids)) {
+      const data = await response.json();
+      const result = JSON.parse(data.candidates[0].content.parts[0].text);
+
+      if (result.add_item_ids?.length) {
         const newItems = result.add_item_ids
           .map((id: number) => MENU.find(m => m.id === id))
           .filter(Boolean)
-          .map((item: MenuItem) => ({ ...item, instanceId: Date.now() + Math.random() }));
+          .map((item: MenuItem) => ({ ...item, instanceId: Math.random() }));
         setCart(prev => [...prev, ...newItems]);
       }
-      setAiMessage(result.voice_response || "Done.");
+
+      setAiMessage(result.voice_response || "Added to your order.");
       speakResponse(result.voice_response || "Order updated.");
     } catch (error) {
-      setAiMessage("Sorry, I had trouble processing that.");
+      setAiMessage("Sorry, I missed that.");
     } finally {
       setIsProcessing(false);
     }
   };
 
   const speakResponse = async (text: string) => {
-    const apiKey = CARTESIA_API_KEY;
-    if (!apiKey || apiKey === 'YOUR_CARTESIA_API_KEY') return;
+    if (!CARTESIA_API_KEY || CARTESIA_API_KEY === 'YOUR_CARTESIA_API_KEY') return;
     try {
       setIsPlayingAudio(true);
       const response = await fetch("https://api.cartesia.ai/tts/bytes", {
         method: "POST",
-        headers: {
-          "Cartesia-Version": "2024-06-10", 
-          "X-API-Key": apiKey,
-          "Content-Type": "application/json",
-        },
+        headers: { "Cartesia-Version": "2024-06-10", "X-API-Key": CARTESIA_API_KEY, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model_id: "sonic-3", 
-          transcript: text,
-          voice: { mode: "id", id: CARTESIA_VOICE_ID },
+          model_id: "sonic-3", transcript: text, voice: { mode: "id", id: CARTESIA_VOICE_ID },
           output_format: { container: "mp3", sample_rate: 44100, bit_rate: 128000 },
         }),
       });
-      if (!response.ok) { setIsPlayingAudio(false); return; }
       const blob = new Blob([await response.arrayBuffer()], { type: "audio/mp3" });
-      if (audioRef.current) audioRef.current.pause();
       const audio = new Audio(URL.createObjectURL(blob));
       audioRef.current = audio;
       audio.onended = () => setIsPlayingAudio(false);
-      audio.onerror = () => setIsPlayingAudio(false);
       await audio.play();
-    } catch (error) {
-      setIsPlayingAudio(false);
-    }
+    } catch (e) { setIsPlayingAudio(false); }
   };
 
-  const removeFromCart = (instanceId: number) => {
-    setCart(prev => prev.filter(i => i.instanceId !== instanceId));
+  const handleCompleteOrder = () => {
+    if (cart.length === 0) return;
+    
+    const newReceipt: ReceiptData = {
+        orderId: Math.random().toString(36).substring(2, 7).toUpperCase(),
+        items: [...cart],
+        total: cart.reduce((sum, item) => sum + item.price, 0),
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setReceipt(newReceipt);
+    setIsReceiptVisible(true);
+    setCart([]);
+    setAiMessage("Thank you! Your order is being prepared.");
+    speakResponse("Thank you for your order. We are preparing it now.");
   };
 
   const total = cart.reduce((sum, item) => sum + item.price, 0);
-  const filteredMenu = MENU.filter(item => item.category === activeCategory);
+  const filteredMenu = activeCategory === "All" 
+    ? MENU 
+    : MENU.filter(item => item.category === activeCategory); // Modified filtering logic
 
   return (
-    <div className="h-screen bg-[#F5F5F5] flex overflow-hidden font-sans select-none">
-      {/* --- SIDEBAR NAVIGATION --- */}
+    <div className="h-screen bg-[#F5F5F5] flex overflow-hidden font-sans select-none relative">
+      
+      {/* --- RECEIPT OVERLAY --- */}
+      {receipt && (
+        <div className={`absolute inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-500 ${isReceiptVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className={`bg-white w-80 p-8 shadow-2xl rounded-sm transform transition-transform duration-500 font-mono ${isReceiptVisible ? 'scale-100 rotate-0' : 'scale-90 rotate-2'}`}>
+                <div className="flex flex-col items-center border-b-2 border-dashed border-gray-200 pb-4 mb-4">
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2">
+                        <CheckCircle2 className="text-emerald-500" />
+                    </div>
+                    <h2 className="text-xl font-bold uppercase tracking-widest">Receipt</h2>
+                    <p className="text-xs text-gray-400">ORDER #{receipt.orderId}</p>
+                </div>
+                <div className="space-y-2 mb-6 text-sm">
+                    {receipt.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between">
+                            <span className="truncate pr-4">{item.name}</span>
+                            <span>${item.price.toFixed(2)}</span>
+                        </div>
+                    ))}
+                </div>
+                <div className="border-t-2 border-gray-100 pt-4 flex justify-between font-bold text-lg">
+                    <span>TOTAL</span>
+                    <span>${receipt.total.toFixed(2)}</span>
+                </div>
+                <div className="mt-8 text-center text-[10px] text-gray-400 uppercase tracking-tighter">
+                    <p>{receipt.timestamp}</p>
+                    <p className="mt-1">Enjoy your meal!</p>
+                </div>
+                {/* Visual jagged bottom for receipt effect */}
+                <div className="absolute -bottom-2 left-0 right-0 flex overflow-hidden">
+                    {[...Array(10)].map((_, i) => (
+                        <div key={i} className="w-8 h-4 bg-white rotate-45 transform origin-top-left shadow-sm"></div>
+                    ))}
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* --- SIDEBAR --- */}
       <div className="w-28 bg-white border-r border-gray-200 flex flex-col items-center py-6 gap-4">
         <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-red-100">
             <UtensilsCrossed className="text-white w-8 h-8" />
         </div>
         {CATEGORIES.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`flex flex-col items-center justify-center w-20 h-20 rounded-xl transition-all duration-200 ${
-              activeCategory === cat 
-              ? 'bg-[#FFC72C] text-gray-900 shadow-md scale-105 font-bold' 
-              : 'text-gray-400 hover:bg-gray-50'
-            }`}
-          >
+          <button key={cat} onClick={() => setActiveCategory(cat)}
+            className={`flex flex-col items-center justify-center w-20 h-20 rounded-xl transition-all ${activeCategory === cat ? 'bg-[#FFC72C] text-gray-900 shadow-md font-bold' : 'text-gray-400 hover:bg-gray-50'}`}>
             <span className="text-xs text-center leading-tight uppercase tracking-tighter">{cat}</span>
           </button>
         ))}
-        <div className="mt-auto flex flex-col gap-4">
-            <button className="p-3 text-gray-400"><Languages className="w-6 h-6"/></button>
-            <button className="p-3 text-gray-400"><Info className="w-6 h-6"/></button>
-        </div>
       </div>
 
-      {/* --- MAIN CONTENT AREA --- */}
+      {/* --- MAIN AREA --- */}
       <div className="flex-1 flex flex-col relative">
         <header className="p-8 pb-4">
           <h2 className="text-4xl font-black text-gray-900 flex items-center gap-3">
@@ -317,99 +256,84 @@ export default function OrderPage() {
           </h2>
         </header>
 
-        {/* --- PRODUCT GRID --- */}
-        <div className="flex-1 overflow-y-auto p-8 pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start pb-40">
+        <div className="flex-1 overflow-y-auto p-8 pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start pb-48">
           {filteredMenu.map((item) => (
-            <div 
-              key={item.id} 
-              onClick={() => setCart(prev => [...prev, { ...item, instanceId: Date.now() }])}
-              className="bg-white rounded-3xl p-6 shadow-sm border-2 border-transparent hover:border-[#FFC72C] active:scale-95 transition-all cursor-pointer group flex flex-col items-center text-center"
+            <div key={item.id} 
+              onClick={() => setCart(prev => [...prev, { ...item, instanceId: Math.random() }])}
+              className="bg-white rounded-3xl p-6 shadow-sm border-2 border-transparent hover:border-[#FFC72C] active:scale-95 transition-all cursor-pointer group flex flex-col items-center overflow-hidden"
             >
-              <div className="text-7xl mb-4 group-hover:scale-110 transition-transform">{item.image}</div>
-              <h3 className="font-extrabold text-xl text-gray-800 h-14 line-clamp-2">{item.name}</h3>
-              <p className="text-emerald-600 font-black text-2xl mt-2">${item.price.toFixed(2)}</p>
-              <div className="mt-4 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-[#FFC72C] transition-colors">
-                <span className="text-2xl font-bold">+</span>
+              <div className="text-7xl mb-6 group-hover:scale-110 transition-transform">{item.image}</div>
+              {/* Name and Price Bar */}
+              <div className="w-full bg-gray-50 rounded-2xl p-3 flex flex-col items-center gap-1 group-hover:bg-[#FFF8E1] transition-colors">
+                <h3 className="font-bold text-gray-800 text-sm text-center leading-tight h-8 line-clamp-2">{item.name}</h3>
+                <p className="text-emerald-600 font-black text-lg">${item.price.toFixed(2)}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* --- AI ASSISTANT OVERLAY --- */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl bg-gray-900 rounded-full shadow-2xl p-2 pl-8 flex items-center border-4 border-white">
-            <div className="flex-1">
-                <p className="text-gray-400 text-[10px] uppercase font-bold tracking-[0.2em]">Assistant AI</p>
-                <p className={`text-white font-medium truncate pr-4 ${isListening ? 'animate-pulse' : ''}`}>
-                    {aiMessage}
-                </p>
+        {/* --- AI ASSISTANT (REFINED CENTERING) --- */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl bg-gray-900 rounded-[3rem] shadow-2xl p-3 pl-10 flex items-center gap-6 border-4 border-white">
+            <div className="flex-1 py-1">
+                <p className="text-gray-500 text-[9px] uppercase font-black tracking-widest mb-0.5">Voice Command</p>
+                <div 
+                    className="max-h-20 overflow-y-auto pr-4"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }} // Hide scrollbar for Firefox and IE/Edge
+                >
+                    <p className={`text-white text-lg font-medium leading-tight ${isListening ? 'animate-pulse text-red-400' : ''}`}>
+                        {aiMessage}
+                    </p>
+                </div>
             </div>
-            <button 
-                onClick={toggleListening}
-                disabled={isProcessing || isPlayingAudio}
-                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${
-                    isPlayingAudio ? 'bg-gray-700' :
-                    isListening ? 'bg-red-600' : 'bg-red-600 hover:bg-red-700'
-                }`}
-            >
-                {isProcessing || isPlayingAudio ? (
-                    <Loader2 className="w-8 h-8 text-white animate-spin" />
-                ) : isListening ? (
-                    <MicOff className="w-8 h-8 text-white" />
-                ) : (
-                    <Mic className="w-8 h-8 text-white" />
-                )}
+            <button onClick={toggleListening} disabled={isProcessing || isPlayingAudio}
+                className={`w-16 h-16 shrink-0 rounded-full flex items-center justify-center transition-all ${isPlayingAudio ? 'bg-gray-800' : isListening ? 'bg-red-600 scale-110 shadow-[0_0_20px_rgba(220,38,38,0.5)]' : 'bg-red-600 hover:bg-red-700'}`}>
+                {isProcessing || isPlayingAudio ? <Loader2 className="w-8 h-8 text-white animate-spin" /> : isListening ? <MicOff className="w-8 h-8 text-white" /> : <Mic className="w-8 h-8 text-white" />}
             </button>
         </div>
       </div>
 
-      {/* --- ORDER SUMMARY (RIGHT SIDE) --- */}
-      <div className="w-[380px] bg-white border-l border-gray-200 flex flex-col shadow-2xl relative z-20">
-        <div className="p-8 pb-4">
-          <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-            <ShoppingBag className="w-7 h-7 text-red-600" />
-            My Order
-          </h2>
-          <p className="text-gray-400 text-sm font-bold">{cart.length} items selected</p>
+      {/* --- ORDER SUMMARY --- */}
+      <div className="w-[380px] bg-white border-l border-gray-200 flex flex-col shadow-2xl z-20">
+        <div className="p-8 pb-4 flex justify-between items-center">
+          <div>
+            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2"><ShoppingBag className="w-7 h-7 text-red-600" /> My Order</h2>
+            <p className="text-gray-400 text-sm font-bold">{cart.length} items</p>
+          </div>
+          <ReceiptText className="text-gray-200 w-10 h-10" />
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 space-y-4">
           {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center opacity-30 px-10">
+            <div className="h-full flex flex-col items-center justify-center text-center opacity-20 px-10">
               <UtensilsCrossed className="w-20 h-20 mb-4" />
-              <p className="font-bold text-lg leading-tight">Your basket is waiting for something delicious!</p>
+              <p className="font-bold text-lg">Your cart is empty</p>
             </div>
           ) : (
             cart.map((item) => (
-              <div key={item.instanceId} className="group flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-200 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="text-4xl">{item.image}</div>
+              <div key={item.instanceId} className="group flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-200 animate-in fade-in slide-in-from-right-4">
+                <div className="text-3xl">{item.image}</div>
                 <div className="flex-1">
-                  <p className="font-extrabold text-gray-800 leading-tight">{item.name}</p>
-                  <p className="text-emerald-600 font-black">${item.price.toFixed(2)}</p>
+                  <p className="font-extrabold text-gray-800 leading-tight text-sm">{item.name}</p>
+                  <p className="text-emerald-600 font-black text-sm">${item.price.toFixed(2)}</p>
                 </div>
-                <button 
-                    onClick={() => removeFromCart(item.instanceId)}
-                    className="p-2 bg-white rounded-lg shadow-sm text-gray-300 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-5 h-5" />
+                <button onClick={() => setCart(prev => prev.filter(i => i.instanceId !== item.instanceId))} className="p-2 bg-white rounded-lg text-gray-300 hover:text-red-500 transition-colors">
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))
           )}
         </div>
 
-        <div className="p-8 bg-gray-50 border-t border-gray-200 rounded-t-[40px] shadow-[0_-20px_40px_rgba(0,0,0,0.02)]">
+        <div className="p-8 bg-gray-50 border-t border-gray-200 rounded-t-[40px] shadow-inner">
           <div className="flex justify-between items-end mb-6">
             <div>
-                <p className="text-gray-400 font-bold uppercase text-xs tracking-wider">Total Amount</p>
+                <p className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">Total</p>
                 <p className="text-4xl font-black text-gray-900">${total.toFixed(2)}</p>
             </div>
-            <div className="text-right">
-                <p className="text-gray-400 text-[10px] font-bold">Includes GST</p>
-            </div>
+            <div className="text-right text-[10px] text-gray-400 font-bold">Tax Included</div>
           </div>
-          <button className={`w-full py-6 rounded-2xl font-black text-xl transition-all shadow-xl shadow-red-100 ${
-            cart.length > 0 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}>
+          <button onClick={handleCompleteOrder} disabled={cart.length === 0}
+            className={`w-full py-6 rounded-2xl font-black text-xl transition-all shadow-xl ${cart.length > 0 ? 'bg-red-600 text-white hover:bg-red-700 active:scale-95' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
             COMPLETE ORDER
           </button>
         </div>
