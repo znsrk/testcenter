@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Mic, MicOff, Loader2, Trash2, ChevronRight, Languages, Info, UtensilsCrossed } from 'lucide-react';
+import { ShoppingBag, Mic, MicOff, Loader2, Trash2 } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'YOUR_GOOGLE_GEMINI_KEY'; 
@@ -133,24 +133,23 @@ const MENU: MenuItem[] = [
   { id: 100, name: "Hot Chocolate", price: 4.50, category: "Drinks", image: "☕", desc: "Milk and cocoa topped with marshmallows." }
 ];
 
-const CATEGORIES = ["Breakfast", "Starters", "Mains", "Sides", "Desserts", "Drinks"];
-
 export default function OrderPage() {
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [activeCategory, setActiveCategory] = useState("Mains");
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false); // New: Tracks audio playback
   const [aiMessage, setAiMessage] = useState("Hi! Tap the mic to order.");
   
   const recognitionRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null); // New: Manual silence detection
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
+      
+      // Changed to continuous: true so we can manage the 'thinking' time manually
       recognitionRef.current.continuous = true; 
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'en-US';
@@ -158,7 +157,9 @@ export default function OrderPage() {
       let finalTranscript = '';
 
       recognitionRef.current.onresult = (event: any) => {
+        // Clear silence timer on every new result
         if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+
         let interimTranscript = '';
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
@@ -167,63 +168,81 @@ export default function OrderPage() {
             interimTranscript += event.results[i][0].transcript;
           }
         }
+
+        // Set a timer to wait 2 seconds before finalizing (allows for pauses/thinking)
         silenceTimerRef.current = setTimeout(() => {
           if (finalTranscript || interimTranscript) {
             const fullText = (finalTranscript + interimTranscript).trim();
             if (fullText) processOrderWithAI(fullText);
             recognitionRef.current?.stop();
           }
-        }, 1300);
+        }, 1300); // 1300ms pause allowed
       };
 
       recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech error", event);
         setIsListening(false);
         setAiMessage("I didn't catch that. Please try again.");
       };
       
       recognitionRef.current.onend = () => {
         setIsListening(false);
-        finalTranscript = '';
+        finalTranscript = ''; // Reset for next session
       };
+    } else {
+      setAiMessage("Voice input not supported in this browser.");
     }
   }, []);
 
   const toggleListening = () => {
+    // Prevent mic toggle if audio is playing or processing
     if (isPlayingAudio || isProcessing) return;
+
     if (isListening) {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       recognitionRef.current?.stop();
     } else {
       setIsListening(true);
       recognitionRef.current?.start();
-      setAiMessage("Listening...");
+      setAiMessage("Listening... (Speak your order)");
     }
   };
 
   const processOrderWithAI = async (userText: string) => {
     setIsProcessing(true);
     setAiMessage("Thinking...");
+
     if (!GEMINI_API_KEY || GEMINI_API_KEY === 'YOUR_GOOGLE_GEMINI_KEY') {
-      setAiMessage("Error: API Key missing.");
+      console.error("Missing Google Gemini API Key");
+      setAiMessage("System Error: API Key missing.");
       setIsProcessing(false);
       return;
     }
+
     try {
       const prompt = `
         You are a cashier. Menu: ${JSON.stringify(MENU.map(m => ({ id: m.id, name: m.name })))}.
         User said: "${userText}".
-        Identify items. If user asks for something not on menu, ignore it or apologize in voice_response. Choose items simply, if a user asks for X, give X only.
+        Identify items. If user asks for something not on menu, ignore it or apologize in voice_response. Choose items simply, if a user asks for X,  give X only.
         Return strictly JSON.
         Format: { "add_item_ids": [ids], "voice_response": "text" }
       `;
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { response_mime_type: "application/json" }
+          generationConfig: {
+            response_mime_type: "application/json"
+          }
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
       const data = await response.json();
       const rawText = data.candidates[0].content.parts[0].text;
       const result = JSON.parse(rawText);
@@ -233,184 +252,175 @@ export default function OrderPage() {
           .map((id: number) => MENU.find(m => m.id === id))
           .filter(Boolean)
           .map((item: MenuItem) => ({ ...item, instanceId: Date.now() + Math.random() }));
+        
         setCart(prev => [...prev, ...newItems]);
       }
+
       setAiMessage(result.voice_response || "Done.");
       speakResponse(result.voice_response || "Order updated.");
+
     } catch (error) {
-      setAiMessage("Sorry, I had trouble processing that.");
+      console.error("AI Processing Error:", error);
+      setAiMessage("Sorry, I had trouble processing that order.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const speakResponse = async (text: string) => {
-    const apiKey = CARTESIA_API_KEY;
-    if (!apiKey || apiKey === 'YOUR_CARTESIA_API_KEY') return;
-    try {
-      setIsPlayingAudio(true);
-      const response = await fetch("https://api.cartesia.ai/tts/bytes", {
-        method: "POST",
-        headers: {
-          "Cartesia-Version": "2024-06-10", 
-          "X-API-Key": apiKey,
-          "Content-Type": "application/json",
+const speakResponse = async (text: string) => {
+  const apiKey = CARTESIA_API_KEY;
+  const voiceId = CARTESIA_VOICE_ID || "9626c31c-bec5-4cca-baa8-f8ba9e84c8bc";
+
+  if (!apiKey || apiKey === 'YOUR_CARTESIA_API_KEY') {
+    console.warn("Cartesia API Key missing");
+    return;
+  }
+
+  try {
+    setIsPlayingAudio(true); // Lock the mic button
+    const response = await fetch("https://api.cartesia.ai/tts/bytes", {
+      method: "POST",
+      headers: {
+        "Cartesia-Version": "2024-06-10", 
+        "X-API-Key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model_id: "sonic-3", 
+        transcript: text,
+        voice: {
+          mode: "id",
+          id: voiceId,
         },
-        body: JSON.stringify({
-          model_id: "sonic-3", 
-          transcript: text,
-          voice: { mode: "id", id: CARTESIA_VOICE_ID },
-          output_format: { container: "mp3", sample_rate: 44100, bit_rate: 128000 },
-        }),
-      });
-      if (!response.ok) { setIsPlayingAudio(false); return; }
-      const blob = new Blob([await response.arrayBuffer()], { type: "audio/mp3" });
-      if (audioRef.current) audioRef.current.pause();
-      const audio = new Audio(URL.createObjectURL(blob));
-      audioRef.current = audio;
-      audio.onended = () => setIsPlayingAudio(false);
-      audio.onerror = () => setIsPlayingAudio(false);
-      await audio.play();
-    } catch (error) {
+        output_format: {
+          container: "mp3",
+          sample_rate: 44100,
+          bit_rate: 128000,
+        },
+      }),
+    });
+
+    if (!response.ok) {
       setIsPlayingAudio(false);
+      return;
     }
-  };
+
+    const arrayBuffer = await response.arrayBuffer();
+    const blob = new Blob([arrayBuffer], { type: "audio/mp3" });
+    const url = URL.createObjectURL(blob);
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    const audio = new Audio(url);
+    audioRef.current = audio;
+
+    audio.onended = () => setIsPlayingAudio(false); // Unlock mic button
+    audio.onerror = () => setIsPlayingAudio(false); // Unlock on error
+    
+    await audio.play();
+
+  } catch (error) {
+    console.error("TTS Error:", error);
+    setIsPlayingAudio(false);
+  }
+};
 
   const removeFromCart = (instanceId: number) => {
     setCart(prev => prev.filter(i => i.instanceId !== instanceId));
   };
 
   const total = cart.reduce((sum, item) => sum + item.price, 0);
-  const filteredMenu = MENU.filter(item => item.category === activeCategory);
 
   return (
-    <div className="h-screen bg-[#F5F5F5] flex overflow-hidden font-sans select-none">
-      {/* --- SIDEBAR NAVIGATION --- */}
-      <div className="w-28 bg-white border-r border-gray-200 flex flex-col items-center py-6 gap-4">
-        <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-red-100">
-            <UtensilsCrossed className="text-white w-8 h-8" />
-        </div>
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat}
-            onClick={() => setActiveCategory(cat)}
-            className={`flex flex-col items-center justify-center w-20 h-20 rounded-xl transition-all duration-200 ${
-              activeCategory === cat 
-              ? 'bg-[#FFC72C] text-gray-900 shadow-md scale-105 font-bold' 
-              : 'text-gray-400 hover:bg-gray-50'
-            }`}
-          >
-            <span className="text-xs text-center leading-tight uppercase tracking-tighter">{cat}</span>
-          </button>
-        ))}
-        <div className="mt-auto flex flex-col gap-4">
-            <button className="p-3 text-gray-400"><Languages className="w-6 h-6"/></button>
-            <button className="p-3 text-gray-400"><Info className="w-6 h-6"/></button>
-        </div>
-      </div>
-
-      {/* --- MAIN CONTENT AREA --- */}
-      <div className="flex-1 flex flex-col relative">
-        <header className="p-8 pb-4">
-          <h2 className="text-4xl font-black text-gray-900 flex items-center gap-3">
-            {activeCategory} <ChevronRight className="w-8 h-8 text-red-600" />
-          </h2>
+    <div className="min-h-screen bg-stone-50 text-stone-800 font-sans flex flex-col md:flex-row">
+      <div className="flex-1 p-6 overflow-y-auto">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-stone-900 mb-2">Fresh & Organic</h1>
+          <p className="text-stone-500">Select items manually or ask our AI assistant.</p>
         </header>
 
-        {/* --- PRODUCT GRID --- */}
-        <div className="flex-1 overflow-y-auto p-8 pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start pb-40">
-          {filteredMenu.map((item) => (
-            <div 
-              key={item.id} 
-              onClick={() => setCart(prev => [...prev, { ...item, instanceId: Date.now() }])}
-              className="bg-white rounded-3xl p-6 shadow-sm border-2 border-transparent hover:border-[#FFC72C] active:scale-95 transition-all cursor-pointer group flex flex-col items-center text-center"
-            >
-              <div className="text-7xl mb-4 group-hover:scale-110 transition-transform">{item.image}</div>
-              <h3 className="font-extrabold text-xl text-gray-800 h-14 line-clamp-2">{item.name}</h3>
-              <p className="text-emerald-600 font-black text-2xl mt-2">${item.price.toFixed(2)}</p>
-              <div className="mt-4 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-[#FFC72C] transition-colors">
-                <span className="text-2xl font-bold">+</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {MENU.map((item) => (
+            <div key={item.id} className="bg-white rounded-2xl p-4 shadow-sm border border-stone-100 hover:border-orange-200 transition-colors cursor-pointer"
+                 onClick={() => setCart(prev => [...prev, { ...item, instanceId: Date.now() }])}>
+              <div className="text-4xl mb-3">{item.image}</div>
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-semibold text-lg">{item.name}</h3>
+                <span className="font-bold text-emerald-600">${item.price.toFixed(2)}</span>
               </div>
+              <p className="text-sm text-stone-500">{item.desc}</p>
             </div>
           ))}
         </div>
-
-        {/* --- AI ASSISTANT OVERLAY --- */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl bg-gray-900 rounded-full shadow-2xl p-2 pl-8 flex items-center border-4 border-white">
-            <div className="flex-1">
-                <p className="text-gray-400 text-[10px] uppercase font-bold tracking-[0.2em]">Assistant AI</p>
-                <p className={`text-white font-medium truncate pr-4 ${isListening ? 'animate-pulse' : ''}`}>
-                    {aiMessage}
-                </p>
-            </div>
-            <button 
-                onClick={toggleListening}
-                disabled={isProcessing || isPlayingAudio}
-                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all ${
-                    isPlayingAudio ? 'bg-gray-700' :
-                    isListening ? 'bg-red-600' : 'bg-red-600 hover:bg-red-700'
-                }`}
-            >
-                {isProcessing || isPlayingAudio ? (
-                    <Loader2 className="w-8 h-8 text-white animate-spin" />
-                ) : isListening ? (
-                    <MicOff className="w-8 h-8 text-white" />
-                ) : (
-                    <Mic className="w-8 h-8 text-white" />
-                )}
-            </button>
-        </div>
       </div>
 
-      {/* --- ORDER SUMMARY (RIGHT SIDE) --- */}
-      <div className="w-[380px] bg-white border-l border-gray-200 flex flex-col shadow-2xl relative z-20">
-        <div className="p-8 pb-4">
-          <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-            <ShoppingBag className="w-7 h-7 text-red-600" />
-            My Order
+      <div className="w-full md:w-96 bg-white border-l border-stone-200 flex flex-col h-[50vh] md:h-screen shadow-xl z-10">
+        <div className="p-6 bg-orange-50 border-b border-orange-100">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-orange-900">
+            <ShoppingBag className="w-5 h-5" /> Current Order
           </h2>
-          <p className="text-gray-400 text-sm font-bold">{cart.length} items selected</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 space-y-4">
+        <div className="p-4 bg-stone-900 text-stone-50 flex flex-col gap-3">
+            <div className="text-sm text-stone-300 uppercase tracking-wider font-semibold">AI Agent</div>
+            <p className="text-stone-100 italic text-lg leading-relaxed">"{aiMessage}"</p>
+            
+            <button 
+              onClick={toggleListening}
+              disabled={isProcessing || isPlayingAudio}
+              className={`mt-2 flex items-center justify-center gap-2 py-4 rounded-xl font-bold transition-all ${
+                isPlayingAudio 
+                  ? 'bg-stone-700 text-stone-400 cursor-not-allowed'
+                  : isListening 
+                  ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+                  : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+              }`}
+            >
+              {isProcessing ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
+              ) : isPlayingAudio ? (
+                <><Loader2 className="w-5 h-5 animate-spin" /> Responding...</>
+              ) : isListening ? (
+                <><MicOff className="w-5 h-5" /> Stop Listening</>
+              ) : (
+                <><Mic className="w-5 h-5" /> Tap to Speak Order</>
+              )}
+            </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center opacity-30 px-10">
-              <UtensilsCrossed className="w-20 h-20 mb-4" />
-              <p className="font-bold text-lg leading-tight">Your basket is waiting for something delicious!</p>
+            <div className="text-center text-stone-400 mt-10">
+              <p>Your basket is empty.</p>
+              <p className="text-sm mt-2 italic">Try: "I want a breakfast burrito and some hot chocolate"</p>
             </div>
           ) : (
             cart.map((item) => (
-              <div key={item.instanceId} className="group flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-200 animate-in fade-in slide-in-from-right-4 duration-300">
-                <div className="text-4xl">{item.image}</div>
-                <div className="flex-1">
-                  <p className="font-extrabold text-gray-800 leading-tight">{item.name}</p>
-                  <p className="text-emerald-600 font-black">${item.price.toFixed(2)}</p>
+              <div key={item.instanceId} className="flex justify-between items-center p-3 bg-stone-50 rounded-lg border border-stone-100">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{item.image}</span>
+                  <div>
+                    <p className="font-medium text-sm">{item.name}</p>
+                    <p className="text-xs text-stone-500">${item.price.toFixed(2)}</p>
+                  </div>
                 </div>
-                <button 
-                    onClick={() => removeFromCart(item.instanceId)}
-                    className="p-2 bg-white rounded-lg shadow-sm text-gray-300 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 className="w-5 h-5" />
+                <button onClick={() => removeFromCart(item.instanceId)} className="text-stone-400 hover:text-red-500">
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))
           )}
         </div>
 
-        <div className="p-8 bg-gray-50 border-t border-gray-200 rounded-t-[40px] shadow-[0_-20px_40px_rgba(0,0,0,0.02)]">
-          <div className="flex justify-between items-end mb-6">
-            <div>
-                <p className="text-gray-400 font-bold uppercase text-xs tracking-wider">Total Amount</p>
-                <p className="text-4xl font-black text-gray-900">${total.toFixed(2)}</p>
-            </div>
-            <div className="text-right">
-                <p className="text-gray-400 text-[10px] font-bold">Includes GST</p>
-            </div>
+        <div className="p-6 bg-stone-50 border-t border-stone-200">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-stone-500">Total</span>
+            <span className="text-2xl font-bold text-stone-900">${total.toFixed(2)}</span>
           </div>
-          <button className={`w-full py-6 rounded-2xl font-black text-xl transition-all shadow-xl shadow-red-100 ${
-            cart.length > 0 ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}>
-            COMPLETE ORDER
+          <button className="w-full py-3 bg-stone-900 text-white rounded-lg font-semibold hover:bg-stone-800 transition-colors">
+            Checkout
           </button>
         </div>
       </div>
