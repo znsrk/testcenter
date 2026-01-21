@@ -279,27 +279,29 @@ export default function OrderPage() {
       </div>
 
       {/* --- MAIN AREA --- */}
-      <div className="flex-1 flex flex-col relative">
-        <header className="p-8 pb-4">
+      <div className="flex-1 flex flex-col relative min-w-0 overflow-hidden">
+        <header className="p-8 pb-4 shrink-0">
           <h2 className="text-4xl font-black text-gray-900 flex items-center gap-3">
             {activeCategory} <ChevronRight className="w-8 h-8 text-red-600" />
           </h2>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 pt-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 content-start pb-48">
-          {filteredMenu.map((item) => (
-            <div key={item.id} 
-              onClick={() => setCart(prev => [...prev, { ...item, instanceId: Math.random() }])}
-              className="bg-white rounded-3xl p-6 shadow-sm border-2 border-transparent hover:border-[#FFC72C] active:scale-95 transition-all cursor-pointer group flex flex-col items-center overflow-hidden"
-            >
-              <div className="text-7xl mb-6 group-hover:scale-110 transition-transform">{item.image}</div>
-              {/* Name and Price Bar */}
-              <div className="w-full bg-gray-50 rounded-2xl p-3 flex flex-col items-center gap-1 group-hover:bg-[#FFF8E1] transition-colors">
-                <h3 className="font-bold text-gray-800 text-sm text-center leading-tight h-8 line-clamp-2">{item.name}</h3>
-                <p className="text-emerald-600 font-black text-lg">${item.price.toFixed(2)}</p>
+        <div className="flex-1 overflow-y-auto p-8 pt-0 pb-48">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-max">
+            {filteredMenu.map((item) => (
+              <div key={item.id} 
+                onClick={() => setCart(prev => [...prev, { ...item, instanceId: Math.random() }])}
+                className="bg-white rounded-3xl p-6 shadow-sm border-2 border-transparent hover:border-[#FFC72C] active:scale-95 transition-all cursor-pointer group flex flex-col items-center overflow-hidden h-fit"
+              >
+                <div className="text-7xl mb-6 group-hover:scale-110 transition-transform">{item.image}</div>
+                {/* Name and Price Bar */}
+                <div className="w-full bg-gray-50 rounded-2xl p-3 flex flex-col items-center gap-1 group-hover:bg-[#FFF8E1] transition-colors">
+                  <h3 className="font-bold text-gray-800 text-sm text-center leading-tight h-8 line-clamp-2">{item.name}</h3>
+                  <p className="text-emerald-600 font-black text-lg">${item.price.toFixed(2)}</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* --- AI ASSISTANT (REFINED CENTERING) --- */}
