@@ -27,7 +27,7 @@ interface ReceiptData {
 }
 
 const MENU: MenuItem[] = [
-  // MAIN MEALS
+  // --- EXISTING MAIN MEALS ---
   { id: 1, name: "Vegetable Soup", price: 5.35, category: "Mains", image: "🥣", desc: "Healthy and warm blended vegetable soup." },
   { id: 2, name: "Noodles with Bean Sprouts", price: 4.20, category: "Mains", image: "🍜", desc: "Stir-fried noodles mixed with fresh bean sprouts." },
   { id: 3, name: "Chicken Tikka Masala", price: 5.30, category: "Mains", image: "🥘", desc: "Creamy spiced chicken curry served in a rich sauce." },
@@ -35,17 +35,47 @@ const MENU: MenuItem[] = [
   { id: 5, name: "Chicken with Boiled Rice", price: 5.30, category: "Mains", image: "🍛", desc: "Tender chicken pieces served over steamed white rice." },
   { id: 6, name: "Kebab (lamb in pitta bread)", price: 4.20, category: "Mains", image: "🥙", desc: "Seasoned lamb served inside a soft pitta bread." },
 
-  // SIDE DISHES
+  // --- NEW BREAKFAST ITEMS ---
+  { id: 13, name: "Oatmeal with Fruit", price: 3.50, category: "Breakfast", image: "🥣", desc: "Warm oatmeal topped with seasonal berries and fruits." },
+  { id: 14, name: "Whole Grain Toast with Avocado", price: 4.50, category: "Breakfast", image: "🥑", desc: "Toasted whole grain bread topped with fresh smashed avocado." },
+  { id: 15, name: "Boiled Eggs", price: 2.50, category: "Breakfast", image: "🥚", desc: "Two perfectly boiled eggs seasoned with a pinch of salt." },
+  { id: 16, name: "Yogurt with Honey", price: 3.00, category: "Breakfast", image: "🍯", desc: "Natural greek yogurt drizzled with sweet honey." },
+
+  // --- NEW MAINS (LUNCH/DINNER) ---
+  { id: 17, name: "Grilled Chicken with Vegetables", price: 6.50, category: "Mains", image: "🍗", desc: "Lean grilled chicken breast served with a side of mixed vegetables." },
+  { id: 18, name: "Brown Rice with Beans", price: 5.00, category: "Mains", image: "🍚", desc: "Hearty brown rice mixed with kidney beans and spices." },
+  { id: 19, name: "Whole Wheat Sandwich", price: 4.00, category: "Mains", image: "🥪", desc: "Fresh salad and cheese on healthy whole wheat bread." },
+  { id: 20, name: "Baked Fish with Lemon", price: 7.00, category: "Mains", image: "🐟", desc: "Oven-baked white fish fillet seasoned with fresh lemon herbs." },
+  { id: 21, name: "Pasta with Tomato Sauce", price: 5.50, category: "Mains", image: "🍝", desc: "Whole wheat pasta tossed in a rich basil tomato sauce." },
+  { id: 22, name: "Vegetable Stir-fry", price: 5.80, category: "Mains", image: "🥘", desc: "Crispy seasonal vegetables stir-fried in a light soy glaze." },
+
+  // --- EXISTING SIDE DISHES ---
   { id: 7, name: "Chicken Salad", price: 6.50, category: "Side Dishes", image: "🥗", desc: "Fresh mixed greens topped with grilled chicken." },
   { id: 8, name: "Spring Rolls", price: 2.05, category: "Side Dishes", image: "🥢", desc: "Crispy fried rolls filled with vegetables." },
+  
+  // --- NEW SIDE DISHES ---
+  { id: 23, name: "Fresh Salad", price: 4.50, category: "Side Dishes", image: "🥗", desc: "A mix of crisp lettuce, cucumber, tomatoes, and peppers." },
+  { id: 24, name: "Steamed Vegetables", price: 3.50, category: "Side Dishes", image: "🥦", desc: "Fresh broccoli, carrots, and cauliflower steamed to perfection." },
 
-  // DESSERTS
+  // --- EXISTING DESSERTS ---
   { id: 9, name: "Ice Cream", price: 2.50, category: "Desserts", image: "🍦", desc: "Creamy frozen dessert in a tub." },
-  { id: 10, name: "Fruit Salad", price: 3.00, category: "Desserts", image: "🥣", desc: "A selection of fresh, seasonal chopped fruits." },
+  { id: 10, name: "Fruit Salad", price: 3.00, category: "Desserts", image: "🍎", desc: "A selection of fresh, seasonal chopped fruits." },
 
-  // DRINKS
+  // --- NEW DESSERTS ---
+  { id: 25, name: "Yogurt Dessert", price: 2.80, category: "Desserts", image: "🍨", desc: "Light yogurt parfait layered with fruit compote." },
+  { id: 26, name: "Fruit Jelly", price: 2.00, category: "Desserts", image: "🍮", desc: "Wobbly, fruity gelatin dessert made with real fruit juice." },
+  { id: 27, name: "Baked Apple", price: 3.20, category: "Desserts", image: "🍎", desc: "Warm apple baked with cinnamon and a touch of brown sugar." },
+  { id: 28, name: "Dark Chocolate (Small Piece)", price: 1.50, category: "Desserts", image: "🍫", desc: "Rich 70% cocoa dark chocolate square." },
+
+  // --- EXISTING DRINKS ---
   { id: 11, name: "Cola", price: 1.00, category: "Drinks", image: "🥤", desc: "Refreshing carbonated cola drink." },
-  { id: 12, name: "Mineral Water (still)", price: 2.50, category: "Drinks", image: "💧", desc: "Still mineral water in a bottle." }
+  { id: 12, name: "Mineral Water (still)", price: 2.50, category: "Drinks", image: "💧", desc: "Still mineral water in a bottle." },
+
+  // --- NEW DRINKS ---
+  { id: 29, name: "Fresh Orange Juice", price: 3.00, category: "Drinks", image: "🍊", desc: "Freshly squeezed orange juice, full of Vitamin C." },
+  { id: 30, name: "Apple Juice", price: 2.50, category: "Drinks", image: "🧃", desc: "Sweet and refreshing chilled apple juice." },
+  { id: 31, name: "Green Tea", price: 2.20, category: "Drinks", image: "🍵", desc: "Hot antioxidant-rich green tea." },
+  { id: 32, name: "Milk", price: 1.50, category: "Drinks", image: "🥛", desc: "Cold glass of semi-skimmed milk." }
 ];
 
 const CATEGORIES = ["All", "Breakfast", "Starters", "Mains", "Desserts", "Drinks"]; // Added "All" category
