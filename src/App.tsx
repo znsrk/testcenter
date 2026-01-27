@@ -10,6 +10,7 @@ import TestsPage from './admin/TestsPage'
 import TestPage from './pages/TestPage'
 import GeneratedTestPage from './pages/test'
 import OrderPage from './pages/OrderPage'
+import SurveyPage from './pages/SurveyPage'
 
 function AppContent() {
   const [showSignup, setShowSignup] = useState(false)
@@ -20,6 +21,9 @@ function AppContent() {
       <Routes>
         {/* NEW: The Order Page Route */}
         <Route path="/order" element={<OrderPage />} />
+        
+        {/* Survey Page Route */}
+        <Route path="/survey" element={<SurveyPage />} />
         
         <Route path="/" element={
           isAuthenticated ? (
