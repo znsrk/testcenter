@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-type Gender = 'male' | 'female' | null
+type Gender = 'male' | 'female' | 'child' | null
 type Answer = 'Да' | 'Нет' | 'Не хочу отвечать' | null
 
 interface SurveyAnswers {
@@ -29,6 +29,14 @@ const maleQuestions = [
   'Хватает ли вашего заработка на содержание семьи?',
 ]
 
+const childQuestions = [
+  'Работает ли твой папа?',
+  'Работает ли твоя мама?',
+  'Есть ли у твоей семьи достаточно денег?',
+  'Должна ли мама заботиться о детях дома?',
+  'Помогаешь ли ты родителям по дому?',
+]
+
 const answerOptions: Answer[] = ['Да', 'Нет', 'Не хочу отвечать']
 
 export default function SurveyPage() {
@@ -45,7 +53,11 @@ export default function SurveyPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const questions = answers.gender === 'female' ? femaleQuestions : maleQuestions
+  const questions = answers.gender === 'female' 
+    ? femaleQuestions 
+    : answers.gender === 'child' 
+      ? childQuestions 
+      : maleQuestions
 
   const handleGenderSelect = (gender: Gender) => {
     setAnswers(prev => ({ ...prev, gender }))
@@ -145,6 +157,12 @@ export default function SurveyPage() {
               className="w-full py-4 px-6 bg-pink-600 hover:bg-pink-700 rounded-xl text-xl font-semibold transition-colors duration-200 active:scale-95"
             >
               Женщина
+            </button>
+            <button
+              onClick={() => handleGenderSelect('child')}
+              className="w-full py-4 px-6 bg-green-600 hover:bg-green-700 rounded-xl text-xl font-semibold transition-colors duration-200 active:scale-95"
+            >
+              Ребёнок
             </button>
           </div>
         )}
