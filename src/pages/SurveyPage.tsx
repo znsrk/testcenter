@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  'https://aosfthajtmywcanvuthz.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvc2Z0aGFqdG15d2NhbnZ1dGh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTE3OTUsImV4cCI6MjA3NjE2Nzc5NX0.wwza28jdOCUKxs6-ipeAvBko_-TrVWU9IrNYeE2Tcto'
+)
 
 type Gender = 'male' | 'female' | 'child' | null
 type Answer = 'Да' | 'Нет' | 'Не хочу отвечать' | null
@@ -82,21 +87,25 @@ export default function SurveyPage() {
     setError(null)
 
     try {
-      // Get the next subject number
+      // Get all existing IDs to find the next number
       const { data: existingRows, error: countError } = await supabase
         .from('opros')
         .select('id')
-        .order('id', { ascending: false })
-        .limit(1)
 
       if (countError) throw countError
 
       let nextNumber = 1
       if (existingRows && existingRows.length > 0) {
-        const lastId = existingRows[0].id
-        const match = lastId.match(/Subject(\d+)/)
-        if (match) {
-          nextNumber = parseInt(match[1], 10) + 1
+        // Find the highest number from all existing Subject IDs
+        const numbers = existingRows
+          .map(row => {
+            const match = row.id.match(/Subject(\d+)/)
+            return match ? parseInt(match[1], 10) : 0
+          })
+          .filter(n => n > 0)
+        
+        if (numbers.length > 0) {
+          nextNumber = Math.max(...numbers) + 1
         }
       }
 
