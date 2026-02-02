@@ -68,13 +68,29 @@ const COLORS = {
   child: '#22c55e',
 }
 
-const questionLabels = [
-  'Вопрос 1',
-  'Вопрос 2',
-  'Вопрос 3',
-  'Вопрос 4',
-  'Вопрос 5',
-]
+const questionLabels = {
+  male: [
+    'Работает ли ваша жена?',
+    'Работаете ли вы?',
+    'Есть ли у вас дети?',
+    'Помогаете ли вы с обязанностями по дому?',
+    'Хватает ли вашего заработка на содержание семьи?',
+  ],
+  female: [
+    'Работает ли ваш муж?',
+    'Работаете ли вы?',
+    'Есть ли у вас дети?',
+    'Выполняете ли вы обязанности по дому?',
+    'Хватает ли вашего заработка на уход за детьми?',
+  ],
+  child: [
+    'Работает ли твой папа?',
+    'Работает ли твоя мама?',
+    'Есть ли у твоей семьи достаточно денег?',
+    'Должна ли мама заботиться о детях дома?',
+    'Помогаешь ли ты родителям по дому?',
+  ],
+}
 
 // Calculate statistics
 const getGenderStats = () => {
@@ -91,14 +107,20 @@ const getGenderStats = () => {
   ]
 }
 
-const getQuestionStats = (questionKey: 'question1' | 'question2' | 'question3' | 'question4' | 'question5') => {
+// Calculate stats for a specific question filtered by gender
+const getQuestionStatsByGender = (
+  questionKey: 'question1' | 'question2' | 'question3' | 'question4' | 'question5',
+  gender: 'male' | 'female' | 'child'
+) => {
   const stats = { yes: 0, no: 0, skip: 0 }
-  surveyData.forEach(row => {
-    const answer = row[questionKey]
-    if (answer === 'Да') stats.yes++
-    else if (answer === 'Нет') stats.no++
-    else stats.skip++
-  })
+  surveyData
+    .filter(row => row.gender === gender)
+    .forEach(row => {
+      const answer = row[questionKey]
+      if (answer === 'Да') stats.yes++
+      else if (answer === 'Нет') stats.no++
+      else stats.skip++
+    })
   return [
     { name: 'Да', value: stats.yes, color: COLORS.yes },
     { name: 'Нет', value: stats.no, color: COLORS.no },
@@ -202,16 +224,39 @@ export default function SurveyPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Gender Distribution */}
           <PieChartCard title="Распределение по полу" data={genderStats} />
-
-          {/* Question Charts */}
-          {questionLabels.map((label, index) => (
-            <PieChartCard
-              key={index}
-              title={label}
-              data={getQuestionStats(`question${index + 1}` as 'question1' | 'question2' | 'question3' | 'question4' | 'question5')}
-            />
-          ))}
         </div>
+
+        {/* Questions by Gender */}
+        {(['male', 'female', 'child'] as const).map((gender) => (
+          <div key={gender} className="mt-10">
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-lg ${
+                gender === 'male' 
+                  ? 'bg-blue-500/20 text-blue-400' 
+                  : gender === 'female'
+                    ? 'bg-pink-500/20 text-pink-400'
+                    : 'bg-green-500/20 text-green-400'
+              }`}>
+                {gender === 'male' ? '👨 Мужчины' : gender === 'female' ? '👩 Женщины' : '👶 Дети'}
+              </span>
+              <span className="text-gray-400 text-base font-normal">
+                ({surveyData.filter(r => r.gender === gender).length} ответов)
+              </span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {questionLabels[gender].map((question, index) => (
+                <PieChartCard
+                  key={index}
+                  title={question}
+                  data={getQuestionStatsByGender(
+                    `question${index + 1}` as 'question1' | 'question2' | 'question3' | 'question4' | 'question5',
+                    gender
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
 
         {/* Data Table */}
         <div className="mt-10 bg-gray-800 rounded-2xl p-6 shadow-xl overflow-hidden">
