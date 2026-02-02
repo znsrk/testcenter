@@ -1,245 +1,273 @@
-import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 
-const supabase = createClient(
-  'https://aosfthajtmywcanvuthz.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvc2Z0aGFqdG15d2NhbnZ1dGh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTE3OTUsImV4cCI6MjA3NjE2Nzc5NX0.wwza28jdOCUKxs6-ipeAvBko_-TrVWU9IrNYeE2Tcto'
-)
+// Survey data from CSV
+const surveyData = [
+  { id: 'Subject13', gender: 'male', question1: 'Не хочу отвечать', question2: 'Не хочу отвечать', question3: 'Не хочу отвечать', question4: 'Не хочу отвечать', question5: 'Не хочу отвечать' },
+  { id: 'Subject14', gender: 'female', question1: 'Нет', question2: 'Да', question3: 'Нет', question4: 'Да', question5: 'Нет' },
+  { id: 'Subject15', gender: 'female', question1: 'Нет', question2: 'Да', question3: 'Нет', question4: 'Нет', question5: 'Не хочу отвечать' },
+  { id: 'Subject16', gender: 'child', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject17', gender: 'male', question1: 'Не хочу отвечать', question2: 'Не хочу отвечать', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject18', gender: 'male', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject19', gender: 'male', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject20', gender: 'female', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject21', gender: 'child', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject22', gender: 'male', question1: 'Нет', question2: 'Да', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject23', gender: 'male', question1: 'Нет', question2: 'Да', question3: 'Да', question4: 'Нет', question5: 'Да' },
+  { id: 'Subject24', gender: 'child', question1: 'Да', question2: 'Нет', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject25', gender: 'female', question1: 'Да', question2: 'Да', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject26', gender: 'female', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject27', gender: 'male', question1: 'Да', question2: 'Нет', question3: 'Да', question4: 'Не хочу отвечать', question5: 'Да' },
+  { id: 'Subject28', gender: 'male', question1: 'Не хочу отвечать', question2: 'Нет', question3: 'Не хочу отвечать', question4: 'Не хочу отвечать', question5: 'Нет' },
+  { id: 'Subject29', gender: 'child', question1: 'Нет', question2: 'Да', question3: 'Не хочу отвечать', question4: 'Да', question5: 'Да' },
+  { id: 'Subject30', gender: 'male', question1: 'Да', question2: 'Не хочу отвечать', question3: 'Да', question4: 'Не хочу отвечать', question5: 'Да' },
+  { id: 'Subject31', gender: 'child', question1: 'Не хочу отвечать', question2: 'Не хочу отвечать', question3: 'Не хочу отвечать', question4: 'Да', question5: 'Нет' },
+  { id: 'Subject32', gender: 'female', question1: 'Да', question2: 'Нет', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject33', gender: 'female', question1: 'Не хочу отвечать', question2: 'Да', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject34', gender: 'male', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject35', gender: 'female', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject36', gender: 'child', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject37', gender: 'child', question1: 'Да', question2: 'Нет', question3: 'Не хочу отвечать', question4: 'Да', question5: 'Да' },
+  { id: 'Subject38', gender: 'male', question1: 'Да', question2: 'Нет', question3: 'Да', question4: 'Не хочу отвечать', question5: 'Да' },
+  { id: 'Subject39', gender: 'female', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Нет', question5: 'Да' },
+  { id: 'Subject40', gender: 'female', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject41', gender: 'female', question1: 'Да', question2: 'Нет', question3: 'Нет', question4: 'Нет', question5: 'Не хочу отвечать' },
+  { id: 'Subject42', gender: 'male', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject43', gender: 'male', question1: 'Нет', question2: 'Да', question3: 'Да', question4: 'Нет', question5: 'Да' },
+  { id: 'Subject44', gender: 'male', question1: 'Нет', question2: 'Нет', question3: 'Нет', question4: 'Не хочу отвечать', question5: 'Нет' },
+  { id: 'Subject45', gender: 'child', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject46', gender: 'female', question1: 'Не хочу отвечать', question2: 'Да', question3: 'Нет', question4: 'Да', question5: 'Да' },
+  { id: 'Subject47', gender: 'female', question1: 'Нет', question2: 'Нет', question3: 'Нет', question4: 'Да', question5: 'Нет' },
+  { id: 'Subject48', gender: 'female', question1: 'Не хочу отвечать', question2: 'Нет', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject49', gender: 'female', question1: 'Не хочу отвечать', question2: 'Не хочу отвечать', question3: 'Нет', question4: 'Да', question5: 'Да' },
+  { id: 'Subject50', gender: 'male', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject51', gender: 'child', question1: 'Нет', question2: 'Нет', question3: 'Нет', question4: 'Нет', question5: 'Нет' },
+  { id: 'Subject52', gender: 'child', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject53', gender: 'child', question1: 'Нет', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject54', gender: 'male', question1: 'Нет', question2: 'Нет', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject55', gender: 'male', question1: 'Нет', question2: 'Нет', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject56', gender: 'female', question1: 'Нет', question2: 'Да', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject57', gender: 'male', question1: 'Нет', question2: 'Да', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject58', gender: 'child', question1: 'Не хочу отвечать', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject59', gender: 'male', question1: 'Нет', question2: 'Нет', question3: 'Нет', question4: 'Да', question5: 'Нет' },
+  { id: 'Subject60', gender: 'male', question1: 'Не хочу отвечать', question2: 'Не хочу отвечать', question3: 'Нет', question4: 'Нет', question5: 'Да' },
+  { id: 'Subject61', gender: 'male', question1: 'Не хочу отвечать', question2: 'Нет', question3: 'Да', question4: 'Нет', question5: 'Нет' },
+  { id: 'Subject62', gender: 'male', question1: 'Да', question2: 'Нет', question3: 'Да', question4: 'Нет', question5: 'Да' },
+  { id: 'Subject63', gender: 'female', question1: 'Не хочу отвечать', question2: 'Нет', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject64', gender: 'male', question1: 'Нет', question2: 'Нет', question3: 'Нет', question4: 'Да', question5: 'Да' },
+  { id: 'Subject65', gender: 'child', question1: 'Да', question2: 'Да', question3: 'Да', question4: 'Да', question5: 'Да' },
+  { id: 'Subject66', gender: 'male', question1: 'Нет', question2: 'Да', question3: 'Нет', question4: 'Да', question5: 'Не хочу отвечать' },
+  { id: 'Subject7', gender: 'child', question1: 'Да', question2: 'Нет', question3: 'Да', question4: 'Нет', question5: 'Да' },
+]
 
-type Gender = 'male' | 'female' | 'child' | null
-type Answer = 'Да' | 'Нет' | 'Не хочу отвечать' | null
-
-interface SurveyAnswers {
-  gender: Gender
-  q1: Answer
-  q2: Answer
-  q3: Answer
-  q4: Answer
-  q5: Answer
+const COLORS = {
+  yes: '#22c55e',
+  no: '#ef4444',
+  skip: '#6b7280',
+  male: '#3b82f6',
+  female: '#ec4899',
+  child: '#22c55e',
 }
 
-const femaleQuestions = [
-  'Работает ли ваш муж?',
-  'Работаете ли вы?',
-  'Есть ли у вас дети?',
-  'Выполняете ли вы обязанности по дому?',
-  'Хватает ли вашего заработка на уход за детьми?',
+const questionLabels = [
+  'Вопрос 1',
+  'Вопрос 2',
+  'Вопрос 3',
+  'Вопрос 4',
+  'Вопрос 5',
 ]
 
-const maleQuestions = [
-  'Работает ли ваша жена?',
-  'Работаете ли вы?',
-  'Есть ли у вас дети?',
-  'Помогаете ли вы с обязанностями по дому?',
-  'Хватает ли вашего заработка на содержание семьи?',
-]
+// Calculate statistics
+const getGenderStats = () => {
+  const stats = { male: 0, female: 0, child: 0 }
+  surveyData.forEach(row => {
+    if (row.gender === 'male') stats.male++
+    else if (row.gender === 'female') stats.female++
+    else if (row.gender === 'child') stats.child++
+  })
+  return [
+    { name: 'Мужчины', value: stats.male, color: COLORS.male },
+    { name: 'Женщины', value: stats.female, color: COLORS.female },
+    { name: 'Дети', value: stats.child, color: COLORS.child },
+  ]
+}
 
-const childQuestions = [
-  'Работает ли твой папа?',
-  'Работает ли твоя мама?',
-  'Есть ли у твоей семьи достаточно денег?',
-  'Должна ли мама заботиться о детях дома?',
-  'Помогаешь ли ты родителям по дому?',
-]
+const getQuestionStats = (questionKey: 'question1' | 'question2' | 'question3' | 'question4' | 'question5') => {
+  const stats = { yes: 0, no: 0, skip: 0 }
+  surveyData.forEach(row => {
+    const answer = row[questionKey]
+    if (answer === 'Да') stats.yes++
+    else if (answer === 'Нет') stats.no++
+    else stats.skip++
+  })
+  return [
+    { name: 'Да', value: stats.yes, color: COLORS.yes },
+    { name: 'Нет', value: stats.no, color: COLORS.no },
+    { name: 'Не хочу отвечать', value: stats.skip, color: COLORS.skip },
+  ]
+}
 
-const answerOptions: Answer[] = ['Да', 'Нет', 'Не хочу отвечать']
+interface PieChartCardProps {
+  title: string
+  data: { name: string; value: number; color: string }[]
+}
+
+const PieChartCard = ({ title, data }: PieChartCardProps) => (
+  <div className="bg-gray-800 rounded-2xl p-6 shadow-xl">
+    <h3 className="text-lg font-semibold text-white mb-4 text-center">{title}</h3>
+    <div className="h-64">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={50}
+            outerRadius={80}
+            paddingAngle={3}
+            dataKey="value"
+            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+            labelLine={false}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{
+              backgroundColor: '#1f2937',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#fff',
+            }}
+          />
+          <Legend
+            wrapperStyle={{ color: '#fff' }}
+            formatter={(value) => <span style={{ color: '#d1d5db' }}>{value}</span>}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  </div>
+)
 
 export default function SurveyPage() {
-  const [step, setStep] = useState<'gender' | 'questions' | 'complete'>('gender')
-  const [currentQuestion, setCurrentQuestion] = useState(0)
-  const [answers, setAnswers] = useState<SurveyAnswers>({
-    gender: null,
-    q1: null,
-    q2: null,
-    q3: null,
-    q4: null,
-    q5: null,
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const questions = answers.gender === 'female' 
-    ? femaleQuestions 
-    : answers.gender === 'child' 
-      ? childQuestions 
-      : maleQuestions
-
-  const handleGenderSelect = (gender: Gender) => {
-    setAnswers(prev => ({ ...prev, gender }))
-    setStep('questions')
-  }
-
-  const handleAnswerSelect = async (answer: Answer) => {
-    const questionKey = `q${currentQuestion + 1}` as keyof SurveyAnswers
-    const newAnswers = { ...answers, [questionKey]: answer }
-    setAnswers(newAnswers)
-
-    if (currentQuestion < 4) {
-      setCurrentQuestion(prev => prev + 1)
-    } else {
-      // All questions answered, save to Supabase
-      await saveSurvey(newAnswers)
-    }
-  }
-
-  const saveSurvey = async (surveyAnswers: SurveyAnswers) => {
-    setIsSubmitting(true)
-    setError(null)
-
-    try {
-      // Get all existing IDs to find the next number
-      const { data: existingRows, error: countError } = await supabase
-        .from('opros')
-        .select('id')
-
-      if (countError) throw countError
-
-      let nextNumber = 1
-      if (existingRows && existingRows.length > 0) {
-        // Find the highest number from all existing Subject IDs
-        const numbers = existingRows
-          .map(row => {
-            const match = row.id.match(/Subject(\d+)/)
-            return match ? parseInt(match[1], 10) : 0
-          })
-          .filter(n => n > 0)
-        
-        if (numbers.length > 0) {
-          nextNumber = Math.max(...numbers) + 1
-        }
-      }
-
-      const subjectId = `Subject${nextNumber}`
-
-      const { error: insertError } = await supabase.from('opros').insert({
-        id: subjectId,
-        gender: surveyAnswers.gender,
-        question1: surveyAnswers.q1,
-        question2: surveyAnswers.q2,
-        question3: surveyAnswers.q3,
-        question4: surveyAnswers.q4,
-        question5: surveyAnswers.q5,
-      })
-
-      if (insertError) throw insertError
-
-      setStep('complete')
-    } catch (err) {
-      console.error('Error saving survey:', err)
-      setError('Произошла ошибка при сохранении. Попробуйте ещё раз.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const resetSurvey = () => {
-    setStep('gender')
-    setCurrentQuestion(0)
-    setAnswers({
-      gender: null,
-      q1: null,
-      q2: null,
-      q3: null,
-      q4: null,
-      q5: null,
-    })
-    setError(null)
-  }
+  const genderStats = getGenderStats()
+  const totalResponses = surveyData.length
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Gender Selection */}
-        {step === 'gender' && (
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-center mb-8">
-              Выберите ваш пол
-            </h1>
-            <button
-              onClick={() => handleGenderSelect('male')}
-              className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 rounded-xl text-xl font-semibold transition-colors duration-200 active:scale-95"
-            >
-              Мужчина
-            </button>
-            <button
-              onClick={() => handleGenderSelect('female')}
-              className="w-full py-4 px-6 bg-pink-600 hover:bg-pink-700 rounded-xl text-xl font-semibold transition-colors duration-200 active:scale-95"
-            >
-              Женщина
-            </button>
-            <button
-              onClick={() => handleGenderSelect('child')}
-              className="w-full py-4 px-6 bg-green-600 hover:bg-green-700 rounded-xl text-xl font-semibold transition-colors duration-200 active:scale-95"
-            >
-              Ребёнок
-            </button>
-          </div>
-        )}
+    <div className="min-h-screen bg-gray-900 text-white p-6 md:p-10">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+            Результаты опроса
+          </h1>
+          <p className="text-gray-400 text-lg">
+            Всего ответов: <span className="text-white font-semibold">{totalResponses}</span>
+          </p>
+        </div>
 
-        {/* Questions */}
-        {step === 'questions' && (
-          <div className="space-y-6">
-            <div className="mb-4">
-              <div className="flex justify-between text-sm text-gray-400 mb-2">
-                <span>Вопрос {currentQuestion + 1} из 5</span>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-200 text-sm">Мужчины</p>
+                <p className="text-3xl font-bold">{genderStats[0].value}</p>
               </div>
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${((currentQuestion + 1) / 5) * 100}%` }}
-                />
-              </div>
+              <div className="text-5xl">👨</div>
             </div>
-
-            <h2 className="text-xl font-semibold text-center min-h-[60px] flex items-center justify-center">
-              {questions[currentQuestion]}
-            </h2>
-
-            <div className="space-y-3">
-              {answerOptions.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => handleAnswerSelect(option)}
-                  disabled={isSubmitting}
-                  className="w-full py-4 px-6 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed rounded-xl text-lg font-medium transition-colors duration-200 active:scale-95"
-                >
-                  {option}
-                </button>
-              ))}
+          </div>
+          <div className="bg-gradient-to-br from-pink-600 to-pink-800 rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-pink-200 text-sm">Женщины</p>
+                <p className="text-3xl font-bold">{genderStats[1].value}</p>
+              </div>
+              <div className="text-5xl">👩</div>
             </div>
-
-            {isSubmitting && (
-              <div className="text-center text-gray-400">
-                Сохранение...
-              </div>
-            )}
-
-            {error && (
-              <div className="text-center text-red-400 bg-red-900/30 p-3 rounded-lg">
-                {error}
-              </div>
-            )}
           </div>
-        )}
-
-        {/* Complete */}
-        {step === 'complete' && (
-          <div className="text-center space-y-6">
-            <div className="text-6xl mb-4">✓</div>
-            <h1 className="text-2xl font-bold">
-              Спасибо за участие!
-            </h1>
-            <p className="text-gray-400">
-              Ваши ответы были успешно сохранены.
-            </p>
-            <button
-              onClick={resetSurvey}
-              className="mt-8 py-3 px-8 bg-gray-700 hover:bg-gray-600 rounded-xl text-lg font-medium transition-colors duration-200"
-            >
-              Пройти заново
-            </button>
+          <div className="bg-gradient-to-br from-green-600 to-green-800 rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-200 text-sm">Дети</p>
+                <p className="text-3xl font-bold">{genderStats[2].value}</p>
+              </div>
+              <div className="text-5xl">👶</div>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Gender Distribution */}
+          <PieChartCard title="Распределение по полу" data={genderStats} />
+
+          {/* Question Charts */}
+          {questionLabels.map((label, index) => (
+            <PieChartCard
+              key={index}
+              title={label}
+              data={getQuestionStats(`question${index + 1}` as 'question1' | 'question2' | 'question3' | 'question4' | 'question5')}
+            />
+          ))}
+        </div>
+
+        {/* Data Table */}
+        <div className="mt-10 bg-gray-800 rounded-2xl p-6 shadow-xl overflow-hidden">
+          <h2 className="text-xl font-semibold mb-6">Все ответы</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">ID</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">Пол</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">В1</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">В2</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">В3</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">В4</th>
+                  <th className="text-left py-3 px-4 text-gray-400 font-medium">В5</th>
+                </tr>
+              </thead>
+              <tbody>
+                {surveyData.map((row, index) => (
+                  <tr 
+                    key={row.id} 
+                    className={`border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors ${
+                      index % 2 === 0 ? 'bg-gray-800/50' : ''
+                    }`}
+                  >
+                    <td className="py-3 px-4 font-mono text-gray-300">{row.id}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        row.gender === 'male' 
+                          ? 'bg-blue-500/20 text-blue-400' 
+                          : row.gender === 'female'
+                            ? 'bg-pink-500/20 text-pink-400'
+                            : 'bg-green-500/20 text-green-400'
+                      }`}>
+                        {row.gender === 'male' ? 'М' : row.gender === 'female' ? 'Ж' : 'Р'}
+                      </span>
+                    </td>
+                    {[row.question1, row.question2, row.question3, row.question4, row.question5].map((answer, i) => (
+                      <td key={i} className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          answer === 'Да'
+                            ? 'bg-green-500/20 text-green-400'
+                            : answer === 'Нет'
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {answer === 'Не хочу отвечать' ? '—' : answer}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   )
