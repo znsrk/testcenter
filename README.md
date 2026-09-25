@@ -12,7 +12,7 @@ VITE_OPENAI_API_KEY=your-separate-limited-openai-project-key
 VITE_OPENAI_TEXT_MODEL=gpt-5-mini
 ```
 
-Redeploy after changing any of them; Vite embeds their values at build time. Both the access code and OpenAI key can be extracted by anyone who loads the site, so the code is only a casual gate, **not real security**. Use a dedicated OpenAI project key and a strict spending limit. Never commit the real values. The old `OPENAI_API_KEY`/`ADMIN_ACCESS_CODE` settings do not configure this static deployment.
+Redeploy after changing any of them; Vite embeds their values at build time. Vercel builds fail with a clear error if the first two are absent. Both the access code and OpenAI key can be extracted by anyone who loads the site, so the code is only a casual gate, **not real security**. Use a dedicated OpenAI project key and a strict spending limit. Never commit the real values. The old `OPENAI_API_KEY`/`ADMIN_ACCESS_CODE` settings do not configure this static deployment.
 
 Progress, generated tasks, essays, and attempts stay in the current browser's IndexedDB. Signing out does not erase them. Clearing site data, switching browsers/devices, or using private browsing does not restore them. Jobs need the page open while generating; an interrupted job can be resumed after returning. The former SQLite data and recordings are not migrated to browsers or hosted on Vercel. Audio generation and cross-device profiles require a future backend.
 
