@@ -1,5 +1,21 @@
-# .gitignore
+# Existing local task files
+/Tasks/
+
+# Repository ignore rules
 .env
 .env.local
 *.env
-/node_modules
+/node_modules/
+
+# Temporary transfer directory
+/.remote-copy/
+
+# Server secrets, durable user data, and generated output
+.env.*
+!.env.example
+/data/
+/dist/
+/test-results/
+/playwright-report/
+/.cache/
+*.tsbuildinfo

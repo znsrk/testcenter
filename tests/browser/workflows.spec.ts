@@ -1,0 +1,138 @@
+import { test, expect, type Page } from '@playwright/test'
+
+async function login(page: Page, code = 'E2E-STUDENT-CODE') {
+  await page.goto('/')
+  await page.getByLabel('Your access code', { exact: true }).fill(code)
+  await page.getByRole('button', { name: 'Let’s get started' }).click()
+  await expect(page.getByRole('heading', { name: 'Make room for progress.' })).toBeVisible()
+}
+
+async function createAndOpen(page: Page, button: string, endpoint = '/api/generate') {
+  const response = page.waitForResponse((r) => r.url().endsWith(endpoint) && r.request().method() === 'POST')
+  await page.getByRole('button', { name: button }).click()
+  const result = await response
+  expect(result.status()).toBe(202)
+  const job = await result.json()
+  const card = page.locator(`[data-job-id="${job.id}"]`)
+  await expect(card).toContainText('Saved and ready')
+  await card.getByRole('button', { name: 'Open', exact: true }).click()
+}
+
+test('code login, dashboard, library and responsive layout', async ({ page }, info) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  await page.goto('/')
+  await page.screenshot({ path: `test-results/login-${info.project.name}.png`, fullPage: true })
+  await page.getByLabel('Your access code', { exact: true }).fill('wrong-code')
+  await page.getByRole('button', { name: 'Let’s get started' }).click()
+  await expect(page.getByRole('alert')).toContainText('not valid')
+  await page.getByLabel('Your access code', { exact: true }).fill('E2E-STUDENT-CODE')
+  await page.getByRole('button', { name: 'Let’s get started' }).click()
+  await expect(page.getByRole('heading', { name: 'Make room for progress.' })).toBeVisible()
+  await page.screenshot({ path: `test-results/dashboard-${info.project.name}.png`, fullPage: true })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Make room for progress.' })).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test('generate MCQ, autosave an answer, restore after reload and receive persistent marks', async ({ page }, info) => {
+  await login(page)
+  await page.goto('/#practice')
+  await page.getByLabel('Task format').selectOption('mcq')
+  await createAndOpen(page, 'Generate my practice')
+  await expect(page.locator('.question')).toHaveCount(10)
+  await page.locator('.question').first().getByText('Saturday', { exact: true }).click()
+  await expect(page.getByRole('status')).toHaveText('All changes saved')
+  await page.reload()
+  await expect(page.locator('.question').first().getByRole('radio', { name: 'A Saturday' })).toBeChecked()
+  await page.getByRole('button', { name: 'Finish & see feedback' }).click()
+  await expect(page.locator('.score-ring strong')).toHaveText('1')
+  await expect(page.locator('.answer-feedback')).toHaveCount(10)
+  await page.screenshot({ path: `test-results/feedback-${info.project.name}.png`, fullPage: true })
+  await page.reload()
+  await expect(page.locator('.score-ring strong')).toHaveText('1')
+})
+
+test('writing draft survives reload and assessment shows four criteria and /40', async ({ page }, info) => {
+  await login(page)
+  await page.goto('/#writing')
+  await createAndOpen(page, 'Create a writing prompt')
+  const essay =
+    'Schools can help students to learn about nature by creating community gardens. Working together builds confidence and responsibility.'
+  await page.getByLabel('Your writing', { exact: true }).fill(essay)
+  await expect(page.getByRole('status')).toHaveText('All changes saved')
+  await page.reload()
+  await expect(page.getByLabel('Your writing', { exact: true })).toHaveValue(essay)
+  await page.getByRole('button', { name: 'Get writing feedback' }).click()
+  await expect(page.locator('.criterion')).toHaveCount(4)
+  await expect(page.locator('.score-ring strong')).toHaveText('28.9')
+  await page.screenshot({ path: `test-results/writing-${info.project.name}.png`, fullPage: true })
+  await expect(page.getByText('out of 40', { exact: true })).toBeVisible()
+})
+
+test('students can play shared audio; admin can issue codes and publish within the daily cap', async ({
+  page,
+}, info) => {
+  await login(page)
+  await page.goto('/#listening')
+  await page
+    .getByRole('button', { name: /Voices from the community garden/ })
+    .first()
+    .click()
+  await expect(page.locator('audio')).toBeVisible()
+  await expect.poll(() => page.locator('audio').evaluate((a: HTMLAudioElement) => a.duration)).toBeCloseTo(420, 0)
+  await page.getByText('Recording transcript', { exact: true }).click()
+  await expect(page.getByText(/The community garden opens every Saturday/).first()).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.context().clearCookies()
+  await login(page, 'E2E-MASTER-CODE-DO-NOT-USE')
+  await page.goto('/#admin')
+  await expect(page.getByRole('heading', { name: 'The teacher’s studio.' })).toBeVisible()
+  await page.getByRole('button', { name: 'Create codes' }).click()
+  await expect(page.locator('.new-code code')).toHaveCount(1)
+  await page.getByRole('button', { name: 'I’ve saved these codes' }).click()
+  await page.screenshot({ path: `test-results/admin-${info.project.name}.png`, fullPage: true })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await createAndOpen(page, 'Generate & publish', '/api/admin/audio')
+  await expect(page.locator('audio')).toBeVisible()
+  await expect(page.locator('.question')).toHaveCount(20)
+})
+
+test('students can create two personal audio tasks per day and read the transcript before answering', async ({ page }, info) => {
+  await login(page, `E2E-AUDIO-${info.project.name.toUpperCase()}-CODE`)
+  await page.goto('/#listening')
+  await expect(page.locator('.quota-pill')).toContainText('2of 2 left today')
+  await createAndOpen(page, 'Generate listening task')
+  await expect(page.locator('audio')).toBeVisible()
+  await expect(page.locator('.question')).toHaveCount(20)
+  await page.getByText('Recording transcript', { exact: true }).click()
+  await expect(page.getByText(/The community garden opens every Saturday/).first()).toBeVisible()
+  await expect(page.locator('.answer-feedback')).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByText('Recording transcript', { exact: true })).toBeVisible()
+  await page.goto('/#listening')
+  await expect(page.locator('.quota-pill')).toContainText('1of 2 left today')
+  await createAndOpen(page, 'Generate listening task')
+  await page.goto('/#listening')
+  await expect(page.locator('.quota-pill')).toContainText('0of 2 left today')
+  await expect(page.getByRole('button', { name: 'Generate listening task' })).toBeDisabled()
+})
+
+test('true-false and missing-part formats can be generated, answered and marked', async ({ page }) => {
+  await login(page)
+  await page.goto('/#practice?skill=reading')
+  await page.getByLabel('Task format').selectOption('true_false')
+  await createAndOpen(page, 'Generate my practice')
+  await expect(page.locator('.passage')).toBeVisible()
+  await page.locator('.question').first().getByText('True', { exact: true }).click()
+  await page.getByRole('button', { name: 'Finish & see feedback' }).click()
+  await expect(page.locator('.score-ring strong')).toHaveText('1')
+  await page.goto('/#practice')
+  await page.getByLabel('Task format').selectOption('gap_fill')
+  await createAndOpen(page, 'Generate my practice')
+  await page.getByLabel('Answer to question 1', { exact: true }).fill('  SATURDAY.  ')
+  await page.getByRole('button', { name: 'Finish & see feedback' }).click()
+  await expect(page.locator('.score-ring strong')).toHaveText('1')
+  await expect(page.locator('.answer-feedback').first()).toContainText('Nicely done.')
+})
