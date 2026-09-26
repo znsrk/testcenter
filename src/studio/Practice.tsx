@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowUpRight, Bookmark, Sparkles } from 'lucide-react'
 import { post, message } from './api'
 import { Empty, ErrorNotice, Filters, JobCard, skillIcons } from './components'
@@ -30,14 +30,23 @@ export function Practice({
   const [count, setCount] = useState(10)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [pendingJobId, setPendingJobId] = useState<string | null>(null)
   const skillInfo = catalog.skills.find((s) => s.id === skill)!
   const active = jobs.some((j) => j.kind !== 'audio' && ['queued', 'running'].includes(j.status))
+  useEffect(() => {
+    const completed = jobs.find((job) => job.id === pendingJobId && job.status === 'completed' && job.taskId)
+    if (completed?.taskId) {
+      setPendingJobId(null)
+      onOpen(completed.taskId)
+    }
+  }, [jobs, pendingJobId, onOpen])
   async function generate() {
     setBusy(true)
     setError('')
     try {
       const input: Generation = { ...selection, skill, format, count, audioMode: 'monologue' }
-      await post<Job>('/generate', { ...input, requestId: crypto.randomUUID() })
+      const job = await post<Job>('/generate', { ...input, requestId: crypto.randomUUID() })
+      setPendingJobId(job.id)
       await onGenerated()
     } catch (e) {
       setError(message(e))
@@ -151,6 +160,11 @@ export function Practice({
           <p className="under-button">
             <Bookmark size={13} /> Automatically saved to your library. No daily limit for written practice.
           </p>
+          {pendingJobId && (
+            <p className="under-button" role="status">
+              Your new task will open automatically when ready. If generation fails, use Resume below.
+            </p>
+          )}
         </section>
         <aside className="practice-aside">
           <div className="tip-card">

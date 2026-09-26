@@ -213,7 +213,11 @@ export default function App() {
       .catch((e) => setError(message(e)))
     refresh()
     const timer = setInterval(refresh, 6000)
-    return () => clearInterval(timer)
+    window.addEventListener('testcenter:workspace-changed', refresh)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('testcenter:workspace-changed', refresh)
+    }
   }, [user, refresh])
   useEffect(() => {
     writeLocal('testcenter:selection', selection)

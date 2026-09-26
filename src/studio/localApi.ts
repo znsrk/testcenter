@@ -164,7 +164,10 @@ async function runTask(jobId: string) {
       const job = state.jobs.find((j) => j.id === jobId)!
       job.status = 'failed'; job.error = errorText(error)
     })
-  } finally { activeJobs.delete(jobId) }
+  } finally {
+    activeJobs.delete(jobId)
+    window.dispatchEvent(new Event('testcenter:workspace-changed'))
+  }
 }
 async function runEssay(jobId: string) {
   activeJobs.add(jobId)
@@ -192,7 +195,10 @@ async function runEssay(jobId: string) {
       const attempt = entry?.attempts.find((a) => a.id === job.attemptId)
       if (attempt) attempt.status = 'failed'
     })
-  } finally { activeJobs.delete(jobId) }
+  } finally {
+    activeJobs.delete(jobId)
+    window.dispatchEvent(new Event('testcenter:workspace-changed'))
+  }
 }
 function start(job: LocalJob) {
   activeJobs.add(job.id)
