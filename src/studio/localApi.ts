@@ -16,8 +16,35 @@ const sessionKey = 'testcenter:static-session'
 const databaseName = 'testcenter-browser-v1'
 const storeName = 'workspace'
 const activeJobs = new Set<string>()
+const jobLeasePrefix = 'testcenter:active-job:'
+const jobLeaseDuration = 180_000
+const jobLeaseRefresh = 15_000
+const jobOwner = crypto.randomUUID()
+const jobHeartbeats = new Map<string, ReturnType<typeof setInterval>>()
 let writeQueue: Promise<unknown> = Promise.resolve()
 let databasePromise: Promise<IDBDatabase> | null = null
+
+function leaseKey(jobId: string) { return `${jobLeasePrefix}${jobId}` }
+function hasLiveLease(jobId: string) {
+  try {
+    const lease = JSON.parse(localStorage.getItem(leaseKey(jobId)) || 'null')
+    return typeof lease?.expiresAt === 'number' && lease.expiresAt > Date.now()
+  } catch { return false }
+}
+function renewLease(jobId: string) {
+  try {
+    localStorage.setItem(leaseKey(jobId), JSON.stringify({ owner: jobOwner, expiresAt: Date.now() + jobLeaseDuration }))
+  } catch { /* generation still runs if browser storage is unavailable */ }
+}
+function releaseLease(jobId: string) {
+  const timer = jobHeartbeats.get(jobId)
+  if (timer) clearInterval(timer)
+  jobHeartbeats.delete(jobId)
+  try {
+    const lease = JSON.parse(localStorage.getItem(leaseKey(jobId)) || 'null')
+    if (lease?.owner === jobOwner) localStorage.removeItem(leaseKey(jobId))
+  } catch { /* an invalid lease will expire without affecting the job */ }
+}
 
 function database() {
   databasePromise ||= new Promise((resolve, reject) => {
@@ -165,6 +192,7 @@ async function runTask(jobId: string) {
     })
   } finally {
     activeJobs.delete(jobId)
+    releaseLease(jobId)
     window.dispatchEvent(new Event('testcenter:workspace-changed'))
   }
 }
@@ -196,11 +224,14 @@ async function runEssay(jobId: string) {
     })
   } finally {
     activeJobs.delete(jobId)
+    releaseLease(jobId)
     window.dispatchEvent(new Event('testcenter:workspace-changed'))
   }
 }
 function start(job: LocalJob) {
   activeJobs.add(job.id)
+  renewLease(job.id)
+  jobHeartbeats.set(job.id, setInterval(() => renewLease(job.id), jobLeaseRefresh))
   setTimeout(() => { void (job.kind === 'essay' ? runEssay(job.id) : runTask(job.id)) }, 0)
 }
 function parseBody(options: RequestInit) {
@@ -228,11 +259,15 @@ export async function localApi(path: string, options: RequestInit = {}): Promise
     quota: { day: '', used: 0, remaining: 0, limit: 0, timezone: '' } }
   if (path === '/tasks' && method === 'GET') return (await snapshot()).tasks.map(summary)
   if (path === '/jobs' && method === 'GET') {
-    await mutate((state) => {
-      for (const job of state.jobs) if (['queued', 'running'].includes(job.status) && !activeJobs.has(job.id)) {
-        job.status = 'failed'; job.error = 'Generation stopped when this browser page closed. Use Resume to continue.'
-      }
-    })
+    const stopped = (job: LocalJob) =>
+      ['queued', 'running'].includes(job.status) && !activeJobs.has(job.id) && !hasLiveLease(job.id)
+    if ((await snapshot()).jobs.some(stopped)) {
+      await mutate((state) => {
+        for (const job of state.jobs) if (stopped(job)) {
+          job.status = 'failed'; job.error = 'Generation stopped when this browser page closed. Use Resume to continue.'
+        }
+      })
+    }
     return (await snapshot()).jobs.map(({ draftOutput: _draftOutput, ...job }) => job)
   }
   if (path === '/generate' && method === 'POST') {

@@ -35,6 +35,34 @@ test('round choices lock unavailable tasks and class 9 national', async ({ page 
   await expect(page.getByLabel('Olympiad stage')).toHaveValue('regional')
 })
 
+test('another open tab does not mark active generation as stopped', async ({ page, context }) => {
+  let requestStarted!: () => void
+  let finishRequest!: () => void
+  const started = new Promise<void>((resolve) => { requestStarted = resolve })
+  const finish = new Promise<void>((resolve) => { finishRequest = resolve })
+  await page.route('**/api/openai/responses', async (route) => {
+    requestStarted()
+    await finish
+    await route.fulfill({ status: 401, contentType: 'application/json',
+      body: JSON.stringify({ error: { message: 'Invalid API key.' } }) })
+  })
+  await page.goto('/')
+  await page.getByLabel('Your access code').fill('friends-test-code')
+  await page.getByRole('button', { name: /get started/i }).click()
+  await page.getByRole('link', { name: /Practice studio/i }).click()
+  await page.getByRole('button', { name: /Generate my practice/i }).click()
+  await started
+  const otherTab = await context.newPage()
+  try {
+    await otherTab.goto('/')
+    await otherTab.getByRole('link', { name: /Practice studio/i }).click()
+    await expect(otherTab.locator('.job-card.running')).toBeVisible()
+    await expect(otherTab.getByText('Generation stopped when this browser page closed.')).toHaveCount(0)
+  } finally {
+    finishRequest()
+  }
+})
+
 test('generated task, scoring and attempts survive reload without a server', async ({ page }) => {
   await page.route('**/api/openai/responses', async (route) => {
     const questions = Array.from({ length: 10 }, (_, index) => ({
