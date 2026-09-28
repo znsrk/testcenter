@@ -67,7 +67,10 @@ export function Filters({
         <select
           aria-label="Class"
           value={value.grade}
-          onChange={(e) => onChange({ ...value, grade: Number(e.target.value) })}
+          onChange={(e) => {
+            const grade = Number(e.target.value)
+            onChange({ grade, stage: grade === 9 && value.stage === 'national' ? 'regional' : value.stage })
+          }}
         >
           {catalog.grades.map((g) => (
             <option key={g} value={g}>
@@ -84,7 +87,7 @@ export function Filters({
           onChange={(e) => onChange({ ...value, stage: e.target.value as Selection['stage'] })}
         >
           {catalog.stages.map((s) => (
-            <option key={s.id} value={s.id}>
+            <option key={s.id} value={s.id} disabled={value.grade === 9 && s.id === 'national'}>
               {s.label}
             </option>
           ))}

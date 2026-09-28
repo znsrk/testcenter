@@ -171,7 +171,7 @@ export default function App() {
     return saved &&
       [9, 10, 11].includes(saved.grade) &&
       ['starter', 'district', 'regional', 'national'].includes(saved.stage)
-      ? saved
+      ? saved.grade === 9 && saved.stage === 'national' ? { grade: 9, stage: 'regional' } : saved
       : { grade: 9, stage: 'regional' }
   })
   function navigate(to: string) {

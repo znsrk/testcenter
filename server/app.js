@@ -15,6 +15,7 @@ import { GenerationInput, DraftInput, SubmitInput } from './schemas.js'
 import { createJobs, publicJob } from './jobs.js'
 import { gradeAnswers } from './grading.js'
 import { ffmpegAvailable } from './audio.js'
+import responsesHandler from '../api/openai/responses.js'
 
 export function createApp(config, dependencies = {}) {
   const app = express()
@@ -64,6 +65,7 @@ export function createApp(config, dependencies = {}) {
       message: { error: 'Too many requests. Please wait a moment and try again.' },
     })
   app.get('/api/health', (_req, res) => res.json({ ok: true }))
+  app.post('/api/openai/responses', limited(10, 60_000), responsesHandler)
   app.post('/api/login', limited(15, 15 * 60 * 1000), (req, res) => {
     const { code } = z
       .object({ code: z.string().min(1).max(200) })

@@ -32,7 +32,15 @@ export function Practice({
   const [error, setError] = useState('')
   const [pendingJobId, setPendingJobId] = useState<string | null>(null)
   const skillInfo = catalog.skills.find((s) => s.id === skill)!
+  const englishOnly = selection.stage === 'starter' || selection.stage === 'district'
+  const unavailable = englishOnly && (writingOnly || skill !== 'grammar')
   const active = jobs.some((j) => j.kind !== 'audio' && ['queued', 'running'].includes(j.status))
+  useEffect(() => {
+    if (englishOnly && !writingOnly && skill !== 'grammar') {
+      setSkill('grammar')
+      setFormat('mixed')
+    }
+  }, [englishOnly, writingOnly, skill])
   useEffect(() => {
     const completed = jobs.find((job) => job.id === pendingJobId && job.status === 'completed' && job.taskId)
     if (completed?.taskId) {
@@ -41,6 +49,7 @@ export function Practice({
     }
   }, [jobs, pendingJobId, onOpen])
   async function generate() {
+    if (unavailable) return
     setBusy(true)
     setError('')
     try {
@@ -99,6 +108,7 @@ export function Practice({
                         <button
                           key={s.id}
                           className={skill === s.id ? 'selected' : ''}
+                          disabled={englishOnly && s.id !== 'grammar'}
                           onClick={() => {
                             setSkill(s.id)
                             setFormat(s.id === 'writing' ? 'essay' : 'mixed')
@@ -141,13 +151,13 @@ export function Practice({
               </div>
             </div>
           </div>
-          {selection.stage === 'national' && selection.grade === 9 && (
+          {englishOnly && (
             <div className="notice">
-              Class 9 national practice is adapted from Class 10 examples; no Class 9 national PDF was supplied.
+              Starting and district rounds have Use of English tasks only.
             </div>
           )}
           {error && <ErrorNotice text={error} />}
-          <button className="button primary generate-button" onClick={generate} disabled={busy || active}>
+          <button className="button primary generate-button" onClick={generate} disabled={busy || active || unavailable}>
             {busy
               ? 'Saving your request…'
               : active

@@ -28,6 +28,14 @@ export const GenerationInput = z
     (value) => skills.find((s) => s.id === value.skill).formats.includes(value.format),
     'Choose an available format for this skill.'
   )
+  .refine(
+    (value) => !['starter', 'district'].includes(value.stage) || value.skill === 'grammar',
+    'Starting and district rounds only have Use of English tasks.'
+  )
+  .refine(
+    (value) => value.grade !== 9 || value.stage !== 'national',
+    'Class 9 does not have a national round.'
+  )
 
 export const Question = z
   .object({

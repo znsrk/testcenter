@@ -3,8 +3,16 @@ import assert from 'node:assert/strict'
 import { AppError } from '../server/config.js'
 import { generateTask, hasSourceEvidence, taskGenerationContract, validateTask, words } from '../server/generation.js'
 import { exampleOptions, rawTask } from './fixtures.js'
+import { GenerationInput } from '../server/schemas.js'
 
 const options = { ...exampleOptions, grade: 10, skill: 'reading', format: 'true_false', count: 20 }
+
+test('generation input rejects unavailable round combinations', () => {
+  assert.equal(GenerationInput.safeParse({ ...options, stage: 'starter' }).success, false)
+  assert.equal(GenerationInput.safeParse({ ...options, stage: 'district', skill: 'writing', format: 'essay' }).success, false)
+  assert.equal(GenerationInput.safeParse({ ...options, grade: 9, stage: 'national' }).success, false)
+  assert.equal(GenerationInput.safeParse({ ...options, stage: 'district', skill: 'grammar', format: 'mcq' }).success, true)
+})
 
 test('generation schemas enforce task-specific fields and exact question counts', () => {
   for (const skill of ['grammar', 'reading', 'writing', 'listening']) {

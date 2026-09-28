@@ -69,8 +69,8 @@ function currentUser(): User {
 }
 function errorText(error: unknown) {
   if (error instanceof Error) {
-    if (/401|invalid api key|incorrect api key/i.test(error.message))
-      return 'The OpenAI key was rejected. Check the Vercel build environment variable and redeploy.'
+    if (/invalid api key|incorrect api key/i.test(error.message))
+      return 'The generation service rejected its OpenAI key. Check OPENAI_API_KEY on the server.'
     if (/429|quota|rate limit/i.test(error.message))
       return 'OpenAI is rate-limiting this key or its budget is exhausted. Try again later.'
     return error.message
@@ -78,13 +78,12 @@ function errorText(error: unknown) {
   return 'The request failed. Please try again.'
 }
 function ai() {
-  const apiKey = import.meta.env.VITE_OPENAI_API_KEY
-  if (!apiKey) throw new ApiError('OpenAI is not configured. Set VITE_OPENAI_API_KEY in the Vercel build environment and redeploy.', 503)
-  const client = new OpenAI({ apiKey, dangerouslyAllowBrowser: true, timeout: 180_000, maxRetries: 2 })
+  const apiKey = import.meta.env.VITE_ACCESS_CODE
+  const client = new OpenAI({ apiKey, baseURL: `${window.location.origin}/api/openai`, dangerouslyAllowBrowser: true, timeout: 175_000, maxRetries: 0 })
   return {
     async json(schema: any, name: string, instructions: string, input: unknown, maxTokens = 12000) {
       const response = await client.responses.parse({
-        model: import.meta.env.VITE_OPENAI_TEXT_MODEL || 'gpt-5-mini',
+        model: 'gpt-5-mini',
         store: false,
         instructions,
         input: [{ role: 'user', content: JSON.stringify(input) }],
@@ -242,7 +241,6 @@ export async function localApi(path: string, options: RequestInit = {}): Promise
     const selection = GenerationInput.safeParse(input)
     if (!selection.success) throw new ApiError('Choose a valid class, stage, skill and task format.', 400)
     if (selection.data.skill === 'listening') throw new ApiError('Audio generation is under construction.', 503)
-    if (!import.meta.env.VITE_OPENAI_API_KEY) throw new ApiError('OpenAI is not configured. Set VITE_OPENAI_API_KEY and redeploy.', 503)
     const job = await mutate((state) => {
       const existing = state.jobs.find((j) => j.requestId === requestId)
       if (existing) return existing

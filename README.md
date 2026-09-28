@@ -1,22 +1,22 @@
 # Testcenter
 
-English olympiad practice for classes 9–11. The current Vercel release is a static, browser-only app: one shared access code, OpenAI-generated text tasks, local drafts and progress, and writing feedback out of 40. Audio generation is under construction.
+English olympiad practice for classes 9–11. The Vercel app keeps tasks and drafts in the browser and sends generation requests through a same-origin serverless endpoint. Audio generation is under construction.
 
-## Deploy the browser-only version on Vercel
+## Deploy on Vercel
 
 Import this repository as a **Vite** project. Use the repository root, `npm install`, `npm run build`, and `dist` as the output directory. In **Project Settings → Environment Variables**, set these for **Production** before deploying:
 
 ```dotenv
 VITE_ACCESS_CODE=your-shared-friends-code
-VITE_OPENAI_API_KEY=your-separate-limited-openai-project-key
-VITE_OPENAI_TEXT_MODEL=gpt-5-mini
+OPENAI_API_KEY=your-server-side-openai-project-key
+OPENAI_TEXT_MODEL=gpt-5-mini
 ```
 
-Redeploy after changing any of them; Vite embeds their values at build time. Vercel builds fail with a clear error if the first two are absent. Both the access code and OpenAI key can be extracted by anyone who loads the site, so the code is only a casual gate, **not real security**. Use a dedicated OpenAI project key and a strict spending limit. Never commit the real values. The old `OPENAI_API_KEY`/`ADMIN_ACCESS_CODE` settings do not configure this static deployment.
+Redeploy after changing these values. Vercel builds require `VITE_ACCESS_CODE` and `OPENAI_API_KEY`. The access code is embedded in public JavaScript and is only a casual gate. The OpenAI key stays in the serverless function. Use a dedicated OpenAI project key and a spending limit. Never commit real values.
 
 Progress, generated tasks, essays, and attempts stay in the current browser's IndexedDB. Signing out does not erase them. Clearing site data, switching browsers/devices, or using private browsing does not restore them. Jobs need the page open while generating; an interrupted job can be resumed after returning. The former SQLite data and recordings are not migrated to browsers or hosted on Vercel. Audio generation and cross-device profiles require a future backend.
 
-For local static development, put the three `VITE_` values in an ignored `.env.local`, run `npm install` and `npm run dev:web`, then open the Vite URL. `npm run build`, `npm test`, and `npm run test:e2e` verify the static build, pure/server legacy logic, and a mocked browser generation flow respectively. Browser smoke tests do not spend OpenAI credits. The reference-paper audit remains in [docs/REFERENCE_AUDIT.md](docs/REFERENCE_AUDIT.md).
+For local development, put `VITE_ACCESS_CODE` and `OPENAI_API_KEY` in an ignored `.env` (or export them in your shell), run `npm install` and `npm run dev`, then open the Vite URL. The local Node server handles `/api/openai/responses`. `npm run build`, `npm test`, and `npm run test:e2e` verify the build, server logic, and a mocked browser generation flow respectively. Browser smoke tests do not spend OpenAI credits. The reference-paper audit remains in [docs/REFERENCE_AUDIT.md](docs/REFERENCE_AUDIT.md).
 
 ## Legacy persistent-server version (not deployed on Vercel)
 

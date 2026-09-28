@@ -16,8 +16,27 @@ test('shared code opens a local workspace; audio is under construction', async (
   await expect(page.getByRole('heading', { name: 'The listening room.' })).toBeVisible()
 })
 
+test('round choices lock unavailable tasks and class 9 national', async ({ page }) => {
+  await page.goto('/')
+  await page.getByLabel('Your access code').fill('friends-test-code')
+  await page.getByRole('button', { name: /get started/i }).click()
+  await page.getByRole('link', { name: /Practice studio/i }).click()
+  await page.getByLabel('Olympiad stage').selectOption('starter')
+  await expect(page.getByRole('button', { name: 'Reading', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Writing', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: /Generate my practice/i })).toBeEnabled()
+  await page.getByLabel('Olympiad stage').selectOption('district')
+  await expect(page.getByRole('button', { name: 'Writing', exact: true })).toBeDisabled()
+  await expect(page.locator('option[value="national"]')).toHaveAttribute('disabled', '')
+  await page.getByLabel('Class').selectOption('10')
+  await expect(page.locator('option[value="national"]')).not.toHaveAttribute('disabled', '')
+  await page.getByLabel('Olympiad stage').selectOption('national')
+  await page.getByLabel('Class').selectOption('9')
+  await expect(page.getByLabel('Olympiad stage')).toHaveValue('regional')
+})
+
 test('generated task, scoring and attempts survive reload without a server', async ({ page }) => {
-  await page.route('https://api.openai.com/v1/responses', async (route) => {
+  await page.route('**/api/openai/responses', async (route) => {
     const questions = Array.from({ length: 10 }, (_, index) => ({
       id: `q${index + 1}`, type: 'mcq', text: `Choose the correct answer for item ${index + 1}.`,
       choices: ['Correct', 'Incorrect A', 'Incorrect B'], correctAnswer: 'Correct',
@@ -50,7 +69,7 @@ test('generated task, scoring and attempts survive reload without a server', asy
 })
 
 test('writing assessment saves IELTS-style feedback in this browser', async ({ page }) => {
-  await page.route('https://api.openai.com/v1/responses', async (route) => {
+  await page.route('**/api/openai/responses', async (route) => {
     const name = route.request().postDataJSON().text.format.name
     const criterion = { band: 7, feedback: 'Clear writing with room for detail.',
       evidence: 'My story', nextStep: 'Develop the setting.' }
