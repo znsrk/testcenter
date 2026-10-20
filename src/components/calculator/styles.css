@@ -1,0 +1,288 @@
+.grade-calculator {
+  min-height: 100vh;
+  padding: 64px 24px 40px;
+  color: #0f172a;
+  background: linear-gradient(180deg, #edf9fa, #f1f2ff);
+}
+.grade-calculator .calc-shell {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+.grade-calculator .calc-heading {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.grade-calculator h1 {
+  font-size: clamp(26px, 5vw, 36px);
+  letter-spacing: -0.03em;
+}
+.grade-calculator h2 {
+  font-size: 21px;
+  letter-spacing: -0.02em;
+}
+.grade-calculator .calc-heading > p {
+  max-width: 700px;
+  margin: 12px auto;
+  color: #475569;
+}
+.grade-calculator .calc-formula {
+  font-size: 14px;
+  font-weight: 600;
+  color: #166534;
+}
+.grade-calculator .calc-periods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.grade-calculator .calc-period:last-child {
+  grid-column: 1 / -1;
+}
+.grade-calculator .calc-period,
+.grade-calculator .calc-summary {
+  background: #ffffffed;
+  border: 1px solid #dce7ec;
+  border-radius: 20px;
+  padding: 24px;
+  min-width: 0;
+}
+.grade-calculator .calc-period-heading,
+.grade-calculator .calc-item-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.grade-calculator .calc-period-heading p {
+  color: #64748b;
+  font-size: 13px;
+}
+.grade-calculator .calc-badge {
+  border-radius: 20px;
+  background: #ecfdf5;
+  color: #166534;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.grade-calculator .calc-modes {
+  display: flex;
+  gap: 4px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.grade-calculator .calc-modes button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.grade-calculator .calc-modes button[aria-pressed='true'] {
+  background: #fff;
+  color: #166534;
+  box-shadow: 0 1px 4px #0f172a12;
+}
+.grade-calculator .calc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  font-size: 12px;
+  color: #475569;
+}
+.grade-calculator .calc-field label {
+  font-size: 12px;
+}
+.grade-calculator input,
+.grade-calculator select {
+  width: 100%;
+  color: #0f172a;
+  padding: 10px 12px;
+  font-size: 16px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+}
+.grade-calculator input:focus,
+.grade-calculator select:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px #22c55e20;
+}
+.grade-calculator .calc-hint {
+  color: #526176;
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+}
+.grade-calculator .calc-weight-total {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 14px 0 10px;
+}
+.grade-calculator .calc-item {
+  border: 1px solid #dce7ec;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.grade-calculator .calc-item-name {
+  border-color: transparent;
+  background: #f8fafc;
+  font-size: 16px;
+  font-weight: 600;
+}
+.grade-calculator .calc-remove {
+  flex-shrink: 0;
+  width: 36px;
+  min-height: 36px;
+  border: 0;
+  background: #fff1f2;
+  border-radius: 8px;
+  color: #be123c;
+  font-size: 22px;
+}
+.grade-calculator .calc-item-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.grade-calculator .calc-item .calc-items {
+  padding-left: 12px;
+  border-left: 2px solid #d1fae5;
+}
+.grade-calculator .calc-text-button {
+  border: 0;
+  background: transparent;
+  color: #166534;
+  padding: 8px 0 0;
+  font-size: 12px;
+  text-align: left;
+}
+.grade-calculator .calc-secondary {
+  border: 1px solid #b5d8c5;
+  color: #166534;
+  background: #f0fdf4;
+  border-radius: 9px;
+  padding: 9px 14px;
+  font-size: 13px;
+}
+.grade-calculator .calc-period-result {
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border-radius: 12px;
+  margin-top: 16px;
+  font-size: 14px;
+}
+.grade-calculator .calc-item-result {
+  color: #166534;
+  font-size: 12px;
+  margin-top: 10px;
+}
+.grade-calculator .calc-errors {
+  color: #b91c1c;
+  background: #fff1f2;
+  font-size: 13px;
+  border-radius: 10px;
+  padding: 12px 12px 12px 28px;
+  margin: 14px 0 0;
+  overflow-wrap: anywhere;
+}
+.grade-calculator .calc-summary {
+  margin-top: 20px;
+}
+.grade-calculator .calc-summary > h2 {
+  margin-bottom: 12px;
+}
+.grade-calculator .calc-result {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0;
+}
+.grade-calculator .calc-result strong {
+  font-size: 30px;
+}
+.grade-calculator .calc-result small {
+  font-size: 16px;
+  font-weight: 400;
+  color: #64748b;
+}
+.grade-calculator .calc-status {
+  border-radius: 10px;
+  padding: 12px;
+  margin: 14px 0;
+  background: #f1f5f9;
+}
+.grade-calculator .calc-failed {
+  color: #b91c1c;
+}
+.grade-calculator .calc-passed {
+  color: #166534;
+}
+.grade-calculator .calc-targets {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+.grade-calculator .calc-target {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+.grade-calculator .calc-reset {
+  width: 100%;
+  margin-top: 20px;
+  border: 0;
+  border-radius: 12px;
+  padding: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #15803d, #0e7490);
+}
+.grade-calculator .calc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+@media (max-width: 760px) {
+  .grade-calculator {
+    padding: 28px 12px;
+  }
+  .grade-calculator .calc-periods {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .grade-calculator .calc-period,
+  .grade-calculator .calc-summary {
+    padding: 18px 14px;
+    border-radius: 16px;
+  }
+  .grade-calculator .calc-item {
+    padding: 10px;
+  }
+  .grade-calculator .calc-item .calc-items {
+    padding-left: 8px;
+  }
+  .grade-calculator .calc-item-fields {
+    gap: 10px;
+  }
+  .grade-calculator .calc-result {
+    flex-wrap: wrap;
+  }
+}

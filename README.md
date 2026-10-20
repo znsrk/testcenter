@@ -2,7 +2,7 @@
 
 English olympiad practice for classes 9–11. The Vercel app keeps tasks and drafts in the browser and sends generation requests through a same-origin serverless endpoint. Audio generation is under construction.
 
-The grade calculator is publicly available at `/calc` without registration or an access code. It uses Midterm (30%), Endterm (30%), and Final (40%), with minimum exam scores of 25, 25, and 50 respectively.
+The grade calculator is publicly available at `/calc` without registration or an access code. It uses Midterm (30%), Endterm (30%), and Final (40%), with minimum period scores of 25, 25, and 50 respectively. Each period supports direct total entry or an editable assignment breakdown. Both attestations default to four assignments worth 15% each and an exam worth 40%. Enter raw points with their maximum or percentages; exams and assignments can also be split into weighted sections. Each group must total 100%, and section weights are applied inside their parent item's weight. Final section weights are entered by the user because the supplied table specifies only its overall weight. Blank scores remain pending and constrain the achievable total and target-score estimates; explicit zero scores count as earned zeros.
 
 ## Deploy on Vercel
 
