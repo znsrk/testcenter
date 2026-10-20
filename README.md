@@ -2,6 +2,8 @@
 
 English olympiad practice for classes 9–11. The Vercel app keeps tasks and drafts in the browser and sends generation requests through a same-origin serverless endpoint. Audio generation is under construction.
 
+The grade calculator is publicly available at `/calc` without registration or an access code. It uses Midterm (30%), Endterm (30%), and Final (40%), with minimum exam scores of 25, 25, and 50 respectively.
+
 ## Deploy on Vercel
 
 Import this repository as a **Vite** project. Use the repository root, `npm install`, `npm run build`, and `dist` as the output directory. In **Project Settings → Environment Variables**, set these for **Production** before deploying:
